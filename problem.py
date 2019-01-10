@@ -4,7 +4,7 @@ import re
 import time
 
 from openmdao.api import ExternalCodeComp, Problem, IndepVarComp, ScipyOptimizeDriver, ExecComp, \
-    SqliteRecorder
+    SqliteRecorder, ExplicitComponent
 from openmdao.core.analysis_error import AnalysisError
 
 from cst import cst, fit
@@ -164,12 +164,41 @@ class XFoil(ExternalCodeComp):
         os.remove(self.coordinate_file)
 
 
+class Geom(ExplicitComponent):
+
+    def initialize(self):
+        self.options.declare('n_u', default=6, types=int)
+        self.options.declare('n_l', default=6, types=int)
+
+        self.options.declare('n_coords', default=100, types=int)
+
+    def setup(self):
+        n_u = self.options['n_u']
+        n_l = self.options['n_l']
+
+        self.add_input('A_u', shape=n_u)
+        self.add_input('A_l', shape=n_l)
+
+        self.add_output('t_c', val=0.)
+        self.add_output('A_cs', val=0.)
+
+    def compute(self, inputs, outputs, discrete_inputs=None, discrete_outputs=None):
+        n_coords = self.options['n_coords']
+
+        x = np.reshape(cosspace(0, 1, n_coords), (-1, 1))
+        y_u = cst(x, inputs['A_u'])
+        y_l = cst(x, inputs['A_l'])
+        dy = y_u - y_l
+
+        outputs['t_c'] = np.max(dy)
+        outputs['A_cs'] = np.trapz(dy.flatten(), x.flatten())
+
+
 def naca(spec):
     coords_file = 'naca{}.dat'.format(spec)
 
     # Write the Xfoil command file
     with open('temp', 'w') as f:
-        f.write('plop\ng\n\n')
         f.write('naca {}\n'.format(spec))
         f.write('save {}\ny\n'.format(coords_file))
         f.write('quit\n')
@@ -189,19 +218,14 @@ def naca(spec):
         coords_u = coords[:i_0 + 1, :]
         coords_l = coords[i_0:, :]
 
-        import matplotlib.pyplot as plt
-        plt.plot(coords[:, 0], coords[:, 1], 'k')
-        plt.axis('equal')
-        plt.show()
-
         A_u, _ = fit(coords_u[:, 0], coords_u[:, 1], n_a_u, delta=(0., 0.))
         A_l, _ = fit(coords_l[:, 0], coords_l[:, 1], n_a_l, delta=(0., 0.))
-        return A_u, A_l
+        return A_u, A_l, coords
     return None
 
 
 if __name__ == '__main__':
-    A_u, A_l = naca('0012')
+    A_u, A_l, coords_orig = naca('0012')
 
     ivc = IndepVarComp()
     ivc.add_output('A_u', val=A_u)
@@ -210,6 +234,8 @@ if __name__ == '__main__':
     ivc.add_output('M', val=0.)
     ivc.add_output('Cl_des', val=1.0)
     ivc.add_output('Cl_Cd_0', val=1.)
+    ivc.add_output('t_c_0', val=0.0)
+    ivc.add_output('A_cs_0', val=0.0)
 
     prob = Problem()
     prob.driver = ScipyOptimizeDriver()
@@ -222,13 +248,18 @@ if __name__ == '__main__':
     prob.set_solver_print(2)
 
     prob.model.add_subsystem('ivc', ivc, promotes=['*'])
-    prob.model.add_subsystem('XFoil', XFoil(n_u=n_a_u, n_l=n_a_l, plot=False, timeout=2.5), promotes=['*'])
+    prob.model.add_subsystem('XFoil', XFoil(n_u=n_a_u, n_l=n_a_l, plot=False, timeout=10), promotes=['*'])
+    prob.model.add_subsystem('Geom', Geom(n_u=n_a_u, n_l=n_a_l), promotes=['*'])
     prob.model.add_subsystem('F', ExecComp('obj = Cl_Cd_0 * Cd / Cl_des', obj=1, Cl_Cd_0=1, Cd=1., Cl_des=1.),
                              promotes=['*'])
+    prob.model.add_subsystem('G1', ExecComp('g1 = 1 - t_c / t_c_0', g1=0., t_c=1., t_c_0=1.), promotes=['*'])
+    prob.model.add_subsystem('G2', ExecComp('g2 = 1 - A_cs / A_cs_0', g2=0, A_cs=1., A_cs_0=1.), promotes=['*'])
 
     prob.model.add_design_var('A_u', lower=A_u_lower, upper=A_u_upper)
     prob.model.add_design_var('A_l', lower=A_l_lower, upper=A_l_upper)
     prob.model.add_objective('obj')
+    prob.model.add_constraint('g1', upper=0.)
+    prob.model.add_constraint('g2', upper=0.)
 
     prob.model.approx_totals(method='fd', step=1e-2)
     prob.setup()
@@ -236,9 +267,12 @@ if __name__ == '__main__':
     # Run for initial point
     prob.run_model()
     prob['Cl_Cd_0'] = prob['Cl_des'] / prob['Cd']
+    prob['t_c_0'] = prob['t_c']
+    prob['A_cs_0'] = prob['A_cs']
     print('Initial point:')
     print('A_u: ' + np.array2string(prob['A_u'], formatter=formatter)[1:-2])
     print('A_l: ' + np.array2string(prob['A_l'], formatter=formatter)[1:-2])
+    print('t/c: {: 8.3f}, A_cs: {: 8.3f}'.format(prob['t_c'][0], prob['A_cs'][0]))
     print('Cl/Cd: {}'.format(prob['Cl_des'] / prob['Cd']))
 
     # Optimize
@@ -260,6 +294,12 @@ if __name__ == '__main__':
     with open('optimized.dat', 'w') as f:
         for i in range(coords.shape[0]):
             f.write(fmt_str.format(coords[i, 0], coords[i, 1]))
+
+    import matplotlib.pyplot as plt
+    plt.plot(coords_orig[:, 0], coords_orig[:, 1], 'k', coords[:, 0], coords[:, 1], 'r')
+    plt.axis('equal')
+    plt.legend(['Original', 'Optimized'])
+    plt.show()
 
     # Cleanup the problem and exit
     prob.cleanup()
