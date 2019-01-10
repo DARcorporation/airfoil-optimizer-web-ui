@@ -118,10 +118,11 @@ class XFoil(ExternalCodeComp):
                     f.write('m {}\n'.format(M))
 
                 f.write('iter 200\n')
-                f.write('pacc\n{}\n\n'.format(self.polar_file))
+                f.write('pacc\n\n\n')
 
-                f.write('cseq {} {} {}\n\n'.format(Cl_des - dcl/2, Cl_des + dcl/2, dcl))
-                f.write('\n\nquit\n')
+                f.write('cseq {} {} {}\n'.format(Cl_des - dcl/2, Cl_des + dcl/2, dcl))
+                f.write('pwrt\n{}\ny\n\n'.format(self.polar_file))
+                f.write('quit\n')
 
             # increment dcl
             dcl += ddcl
