@@ -1,4 +1,6 @@
-numpy
+numpy==1.16.0
 scipy
 matplotlib
 openmdao
+xfoil==0.0.5
+

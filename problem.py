@@ -1,14 +1,14 @@
 import numpy as np
 import os
-import re
 import time
 
-from openmdao.api import ExternalCodeComp, Problem, IndepVarComp, ScipyOptimizeDriver, ExecComp, \
-    SqliteRecorder, ExplicitComponent
-from openmdao.core.analysis_error import AnalysisError
+from openmdao.api import Problem, IndepVarComp, ScipyOptimizeDriver, ExecComp, SqliteRecorder, ExplicitComponent
 
 from cst import cst, fit
-from util import cosspace, get_random_key
+from util import cosspace
+
+from xfoil import XFoil
+from xfoil.model import Airfoil
 
 formatter = {'float_kind': lambda x: '{: 10.8f}'.format(x)}
 
@@ -26,11 +26,7 @@ A_l_lower = -np.ones(n_a_l)
 A_l_upper = np.ones(n_a_l)
 
 
-class XFoil(ExternalCodeComp):
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.stdout = open(os.devnull, 'w')
+class XFoilComp(ExplicitComponent):
 
     def initialize(self):
         self.options.declare('n_u', default=6, types=int)
@@ -38,21 +34,9 @@ class XFoil(ExternalCodeComp):
 
         self.options.declare('n_coords', default=100, types=int)
 
-        self.options.declare('id', types=str)
-
-        self.options.declare('plot', default=False, types=bool)
-
-    @property
-    def coordinate_file(self):
-        return '0{}.dat'.format(self.options['id'])
-
-    @property
-    def command_file(self):
-        return '0{}.cmd'.format(self.options['id'])
-
-    @property
-    def polar_file(self):
-        return '0{}.pol'.format(self.options['id'])
+        xf = XFoil()
+        xf.print = False
+        self.options.declare('xfoil', default=xf, types=XFoil)
 
     def setup(self):
         n_u = self.options['n_u']
@@ -67,101 +51,30 @@ class XFoil(ExternalCodeComp):
 
         self.add_output('Cd', val=1.)
 
-        self.options['id'] = get_random_key()
-        self.options['external_input_files'] = [self.coordinate_file, self.command_file]
-        self.options['external_output_files'] = [self.polar_file,]
-        self.options['command'] = ['xfoil.exe', '<', self.command_file]
-        self.options['allowed_return_codes'] = [1]
-
         self.declare_partials('*', '*', method='fd')
-        # self.declare_partials('Cd', ['Cl_des', 'Re', 'M'], dependent=False)
 
-    def compute(self, inputs, outputs):
+    def compute(self, inputs, outputs, **kwargs):
         n_coords = self.options['n_coords']
+        xf = self.options['xfoil']
 
-        x = np.reshape(cosspace(0, 1, n_coords), (-1, 1))
+        x = cosspace(0, 1, n_coords)
         y_u = cst(x, inputs['A_u'])
         y_l = cst(x, inputs['A_l'])
 
-        coords_u = np.concatenate((x, y_u), axis=1)
-        coords_l = np.concatenate((x, y_l), axis=1)
-        coords = np.concatenate((np.flip(coords_u[1:], axis=0), coords_l))
+        xf.airfoil = Airfoil(x=np.concatenate((x[-1:0:-1], x)), y=np.concatenate((y_u[-1:0:-1], y_l)))
+        xf.filter()
+        xf.repanel()
+        xf.Re = inputs['Re'][0]
+        xf.M = inputs['M'][0]
+        xf.max_iter = 200
 
-        Re = inputs['Re'][0]
-        M = inputs['M'][0]
-        Cl_des = inputs['Cl_des'][0]
-
-        # Write coordinates file
-        fmt_str = 2 * ('{: >' + str(6 + 1) + '.' + str(6) + 'f} ') + '\n'
-        with open(self.coordinate_file, 'w') as f:
-            for i in range(coords.shape[0]):
-                f.write(fmt_str.format(coords[i, 0], coords[i, 1]))
-
-        outputs['Cd'] = 10
-        dcl = 0.
-        ddcl = 0.01
-        for i in range(4):
-            # Write the Xfoil command file
-            with open(self.command_file, 'w') as f:
-                if not self.options['plot']:
-                    f.write('plop\ng\n\n')
-
-                f.write('load {}\n\n'.format(self.coordinate_file))
-                f.write('mdes\nfilt\n\n')
-                f.write('pane\n')
-                f.write('oper\n')
-
-                if Re > 0.:
-                    f.write('visc {}\n'.format(Re))
-
-                if M > 0.:
-                    f.write('m {}\n'.format(M))
-
-                f.write('iter 200\n')
-                f.write('pacc\n\n\n')
-
-                f.write('cseq {} {} {}\n'.format(Cl_des - dcl/2, Cl_des + dcl/2, dcl))
-                f.write('pwrt\n{}\ny\n\n'.format(self.polar_file))
-                f.write('quit\n')
-
-            # increment dcl
-            dcl += ddcl
-
-            # Run Xfoil
-            try:
-                super().compute([], [])
-            except (AnalysisError, RuntimeError):
-                done = False
-                while not done:
-                    try:
-                        os.remove(self.command_file)
-                        done = True
-                    except Exception:
-                        pass
-                    time.sleep(0.001)
-                continue
-
-            # Read polar
-            if os.path.isfile(self.polar_file):
-                # Read the polar file
-                with open(self.polar_file, 'r') as f:
-                    lines = f.readlines()[12:]
-
-                if lines:
-                    # Parse the data from the read lines
-                    polar = np.zeros((len(lines), len(re.split(r'\s+', lines[0].strip()))))
-                    for i, line in enumerate(lines):
-                        polar[i, :] = np.fromstring(line, dtype=float, count=polar.shape[1], sep=' ')
-
-                    os.remove(self.polar_file)
-                    avgs = np.average(polar, 0)
-                    # print('{: 6.3f} {: 5.3f} {: 5.1f} {: 5.2f}'.format(avgs[0], avgs[1], avgs[2] * 1e4, avgs[1]/avgs[2])
-                    #       + np.array2string(inputs['A_u'], formatter=formatter)[1:-2] + ' '
-                    #       + np.array2string(inputs['A_l'], formatter=formatter)[1:-2])
-                    outputs['Cd'] = avgs[2]
-                    break
-
-        os.remove(self.coordinate_file)
+        _, cd, _ = xf.cl(inputs['Cl_des'][0])
+        if np.isnan(cd):
+            xf.reset_bls()
+            _, cl, cd, _ = xf.cseq(inputs['Cl_des'][0] - 0.05, inputs['Cl_des'][0] + 0.055, 0.005)
+            outputs['Cd'] = np.interp(inputs['Cl_des'][0], cl, cd)
+        else:
+            outputs['Cd'] = cd
 
 
 class Geom(ExplicitComponent):
@@ -225,6 +138,7 @@ def naca(spec):
 
 
 if __name__ == '__main__':
+    t0 = time.time()
     A_u, A_l, coords_orig = naca('0012')
 
     ivc = IndepVarComp()
@@ -248,7 +162,7 @@ if __name__ == '__main__':
     prob.set_solver_print(2)
 
     prob.model.add_subsystem('ivc', ivc, promotes=['*'])
-    prob.model.add_subsystem('XFoil', XFoil(n_u=n_a_u, n_l=n_a_l, plot=False, timeout=10), promotes=['*'])
+    prob.model.add_subsystem('XFoil', XFoilComp(n_u=n_a_u, n_l=n_a_l), promotes=['*'])
     prob.model.add_subsystem('Geom', Geom(n_u=n_a_u, n_l=n_a_l), promotes=['*'])
     prob.model.add_subsystem('F', ExecComp('obj = Cl_Cd_0 * Cd / Cl_des', obj=1, Cl_Cd_0=1, Cd=1., Cl_des=1.),
                              promotes=['*'])
@@ -303,4 +217,6 @@ if __name__ == '__main__':
 
     # Cleanup the problem and exit
     prob.cleanup()
+
+    print('Took {} seconds'.format(time.time() - t0))
     exit(0)
