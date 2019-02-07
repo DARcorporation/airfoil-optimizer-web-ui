@@ -110,6 +110,7 @@ class Geom(ExplicitComponent):
 
 def naca(spec):
     xf = XFoil()
+    xf.print = False
     xf.naca(spec)
     coords = xf.airfoil.coords
 
@@ -161,7 +162,6 @@ class Objective(ExplicitComponent):
 
 
 if __name__ == '__main__':
-    t0 = time.time()
     A_c, A_t, t_te, coords_orig = naca('0009')
 
     ivc = IndepVarComp()
@@ -210,17 +210,24 @@ if __name__ == '__main__':
     print('Initial point:')
     print('A_c : ' + np.array2string(prob['A_c'], formatter=formatter)[1:-2])
     print('A_t : ' + np.array2string(prob['A_t'], formatter=formatter)[1:-2])
-    print('t_TE: {}'.format(prob['t_te'][0]))
-    print('t/c: {: 8.3f}, A_cs: {: 8.3f}'.format(prob['t_c'][0], prob['A_cs'][0]))
-    print('Cl/Cd: {}'.format(prob['Cl_des'] / prob['Cd']))
+    print('t_TE:  {:4.3f}'.format(prob['t_te'][0]))
+    print('t/c :  {:4.3f}, A_cs: {:8.3f}'.format(prob['t_c'][0], prob['A_cs'][0]))
+    print('Cl  :  {:4.3f},   Cd: {:8.3f} counts, Cl/Cd: {:5.2f}'
+          .format(prob['Cl_des'][0], prob['Cd'][0]*1e4, prob['Cl_des'][0] / prob['Cd'][0]))
 
     # Optimize
+    t0 = time.time()
     prob.run_driver()
+    dt = time.time() - t0
     print('Optimized:')
-    print('A_c: ' + np.array2string(prob['A_c'], formatter=formatter)[1:-2])
-    print('A_t: ' + np.array2string(prob['A_t'], formatter=formatter)[1:-2])
-    print('t_TE: {}'.format(prob['t_te'][0]))
-    print('Cl/Cd: {}'.format(prob['Cl_des'] / prob['Cd']))
+    print('A_c : ' + np.array2string(prob['A_c'], formatter=formatter)[1:-2])
+    print('A_t : ' + np.array2string(prob['A_t'], formatter=formatter)[1:-2])
+    print('t_TE:  {:4.3f}'.format(prob['t_te'][0]))
+    print('t/c :  {:4.3f}, A_cs: {:8.3f}'.format(prob['t_c'][0], prob['A_cs'][0]))
+    print('Cl  :  {:4.3f},   Cd: {:8.3f} counts, Cl/Cd: {:5.2f}'
+          .format(prob['Cl_des'][0], prob['Cd'][0]*1e4, prob['Cl_des'][0] / prob['Cd'][0]))
+    print('Drag was reduced by {:5.2f} percent.'.format(100 * (prob['Cd_0'][0] - prob['Cd'][0])/prob['Cd_0'][0]))
+    print('Took {:3.0f} seconds'.format(dt))
 
     # Write optimized geometry to dat file
     x = cosspace(0, 1)
@@ -248,5 +255,4 @@ if __name__ == '__main__':
     # Cleanup the problem and exit
     prob.cleanup()
 
-    print('Took {} seconds'.format(time.time() - t0))
     exit(0)
