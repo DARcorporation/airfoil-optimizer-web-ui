@@ -64,8 +64,7 @@ class XFoilComp(ExplicitComponent):
         y_l = y_c - y_t * np.cos(theta)
 
         self.xf.airfoil = Airfoil(x=np.concatenate((x_u[-1:0:-1], x_l)), y=np.concatenate((y_u[-1:0:-1], y_l)))
-        # self.xf.filter()
-        # self.xf.repanel()
+        self.xf.repanel()
         self.xf.Re = inputs['Re'][0]
         self.xf.M = inputs['M'][0]
         self.xf.max_iter = 200
