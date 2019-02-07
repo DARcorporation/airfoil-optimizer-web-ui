@@ -10,6 +10,8 @@ from util import cosspace
 from xfoil import XFoil
 from xfoil.model import Airfoil
 
+# TODO: Somehow a better optimum was found with xfoil==0.0.9 (L/D = 131)
+
 formatter = {'float_kind': lambda x: '{: 10.8f}'.format(x)}
 
 n_a_u = 5
@@ -62,16 +64,16 @@ class XFoilComp(ExplicitComponent):
         y_l = cst(x, inputs['A_l'])
 
         xf.airfoil = Airfoil(x=np.concatenate((x[-1:0:-1], x)), y=np.concatenate((y_u[-1:0:-1], y_l)))
-        xf.filter()
-        xf.repanel()
+        # xf.filter()
+        # xf.repanel()
         xf.Re = inputs['Re'][0]
         xf.M = inputs['M'][0]
         xf.max_iter = 200
 
-        _, cd, _ = xf.cl(inputs['Cl_des'][0])
+        _, cd, _, _ = xf.cl(inputs['Cl_des'][0])
         if np.isnan(cd):
             xf.reset_bls()
-            _, cl, cd, _ = xf.cseq(inputs['Cl_des'][0] - 0.05, inputs['Cl_des'][0] + 0.055, 0.005)
+            _, cl, cd, _, _ = xf.cseq(inputs['Cl_des'][0] - 0.05, inputs['Cl_des'][0] + 0.055, 0.005)
             outputs['Cd'] = np.interp(inputs['Cl_des'][0], cl, cd)
         else:
             outputs['Cd'] = cd
@@ -108,38 +110,39 @@ class Geom(ExplicitComponent):
 
 
 def naca(spec):
-    coords_file = 'naca{}.dat'.format(spec)
+    xf = XFoil()
+    xf.naca(spec)
+    coords = xf.airfoil.coords
 
-    # Write the Xfoil command file
-    with open('temp', 'w') as f:
-        f.write('naca {}\n'.format(spec))
-        f.write('save {}\ny\n'.format(coords_file))
-        f.write('quit\n')
+    i_0 = np.argmin(coords[:, 0])
+    coords_u = coords[i_0::-1, :]
+    coords_l = coords[i_0:, :]
 
-    os.system('xfoil.exe < temp')
-    time.sleep(1)
+    A_u, _ = fit(coords_u[:, 0], coords_u[:, 1], n_a_u, delta=(0., 0.))
+    A_l, _ = fit(coords_l[:, 0], coords_l[:, 1], n_a_l, delta=(0., 0.))
+    return A_u, A_l, coords
 
-    if os.path.isfile(coords_file):
-        with open(coords_file, 'r') as f:
-            lines = f.readlines()[2:]
 
-        coords = np.zeros((len(lines), 2))
-        for i in range(len(lines)):
-            coords[i, :] = np.fromstring(lines[i], dtype=float, count=2, sep=' ')
+class Objective(ExplicitComponent):
 
-        i_0 = np.argmin(coords[:, 0])
-        coords_u = coords[:i_0 + 1, :]
-        coords_l = coords[i_0:, :]
+    def setup(self):
+        self.add_input('Cl_Cd_0', val=1)
+        self.add_input('Cl_des', val=1)
+        self.add_input('Cd', val=1)
 
-        A_u, _ = fit(coords_u[:, 0], coords_u[:, 1], n_a_u, delta=(0., 0.))
-        A_l, _ = fit(coords_l[:, 0], coords_l[:, 1], n_a_l, delta=(0., 0.))
-        return A_u, A_l, coords
-    return None
+        self.add_output('obj', val=1)
+
+    def compute(self, inputs, outputs, discrete_inputs=None, discrete_outputs=None):
+        if np.isnan(inputs['Cd'][0]):
+            outputs['obj'] = 1e27
+        else:
+            outputs['obj'] = inputs['Cl_Cd_0'] * inputs['Cd'] / inputs['Cl_des']
 
 
 if __name__ == '__main__':
     t0 = time.time()
-    A_u, A_l, coords_orig = naca('0012')
+    A_u, A_l, coords_orig = naca('6412')
+    exit(0)
 
     ivc = IndepVarComp()
     ivc.add_output('A_u', val=A_u)
@@ -164,8 +167,7 @@ if __name__ == '__main__':
     prob.model.add_subsystem('ivc', ivc, promotes=['*'])
     prob.model.add_subsystem('XFoil', XFoilComp(n_u=n_a_u, n_l=n_a_l), promotes=['*'])
     prob.model.add_subsystem('Geom', Geom(n_u=n_a_u, n_l=n_a_l), promotes=['*'])
-    prob.model.add_subsystem('F', ExecComp('obj = Cl_Cd_0 * Cd / Cl_des', obj=1, Cl_Cd_0=1, Cd=1., Cl_des=1.),
-                             promotes=['*'])
+    prob.model.add_subsystem('F', Objective(), promotes=['*'])
     prob.model.add_subsystem('G1', ExecComp('g1 = 1 - t_c / t_c_0', g1=0., t_c=1., t_c_0=1.), promotes=['*'])
     prob.model.add_subsystem('G2', ExecComp('g2 = 1 - A_cs / A_cs_0', g2=0, A_cs=1., A_cs_0=1.), promotes=['*'])
 
