@@ -150,8 +150,7 @@ def naca(spec):
 class Objective(ExplicitComponent):
 
     def setup(self):
-        self.add_input('Cl_Cd_0', val=1)
-        self.add_input('Cl_des', val=1)
+        self.add_input('Cd_0', val=1)
         self.add_input('Cd', val=1)
 
         self.add_output('obj', val=1)
@@ -160,7 +159,7 @@ class Objective(ExplicitComponent):
         if np.isnan(inputs['Cd'][0]):
             outputs['obj'] = 1e27
         else:
-            outputs['obj'] = inputs['Cl_Cd_0'] * inputs['Cd'] / inputs['Cl_des']
+            outputs['obj'] = inputs['Cd'] / inputs['Cd_0']
 
 
 if __name__ == '__main__':
@@ -174,7 +173,7 @@ if __name__ == '__main__':
     ivc.add_output('Re', val=1e6)
     ivc.add_output('M', val=0.)
     ivc.add_output('Cl_des', val=1.0)
-    ivc.add_output('Cl_Cd_0', val=1.)
+    ivc.add_output('Cd_0', val=1.)
     ivc.add_output('t_c_0', val=0.0)
     ivc.add_output('A_cs_0', val=0.0)
 
@@ -207,7 +206,7 @@ if __name__ == '__main__':
 
     # Run for initial point
     prob.run_model()
-    prob['Cl_Cd_0'] = prob['Cl_des'] / prob['Cd']
+    prob['Cd_0'] = prob['Cd']
     prob['t_c_0'] = prob['t_c']
     prob['A_cs_0'] = prob['A_cs']
     print('Initial point:')
