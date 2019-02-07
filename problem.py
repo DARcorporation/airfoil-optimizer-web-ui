@@ -1,5 +1,4 @@
 import numpy as np
-import os
 import time
 
 from openmdao.api import Problem, IndepVarComp, ScipyOptimizeDriver, ExecComp, SqliteRecorder, ExplicitComponent
@@ -25,15 +24,16 @@ t_te_lower = 0
 
 class XFoilComp(ExplicitComponent):
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.xf = XFoil()
+        self.xf.print = False
+
     def initialize(self):
         self.options.declare('n_c', default=6, types=int)
         self.options.declare('n_t', default=6, types=int)
 
         self.options.declare('n_coords', default=100, types=int)
-
-        xf = XFoil()
-        xf.print = False
-        self.options.declare('xfoil', default=xf, types=XFoil)
 
     def setup(self):
         n_c = self.options['n_c']
@@ -53,7 +53,6 @@ class XFoilComp(ExplicitComponent):
 
     def compute(self, inputs, outputs, **kwargs):
         n_coords = self.options['n_coords']
-        xf = self.options['xfoil']
 
         x = cosspace(0, 1, n_coords)
         y_c = cst(x, inputs['A_c'], n1=1, n2=1)
@@ -64,17 +63,17 @@ class XFoilComp(ExplicitComponent):
         x_l = x + y_t * np.sin(theta)
         y_l = y_c - y_t * np.cos(theta)
 
-        xf.airfoil = Airfoil(x=np.concatenate((x_u[-1:0:-1], x_l)), y=np.concatenate((y_u[-1:0:-1], y_l)))
-        xf.filter()
-        xf.repanel()
-        xf.Re = inputs['Re'][0]
-        xf.M = inputs['M'][0]
-        xf.max_iter = 200
+        self.xf.airfoil = Airfoil(x=np.concatenate((x_u[-1:0:-1], x_l)), y=np.concatenate((y_u[-1:0:-1], y_l)))
+        # self.xf.filter()
+        # self.xf.repanel()
+        self.xf.Re = inputs['Re'][0]
+        self.xf.M = inputs['M'][0]
+        self.xf.max_iter = 200
 
-        _, cd, _, _ = xf.cl(inputs['Cl_des'][0])
+        _, cd, _, _ = self.xf.cl(inputs['Cl_des'][0])
         if np.isnan(cd):
-            xf.reset_bls()
-            _, cl, cd, _, _ = xf.cseq(inputs['Cl_des'][0] - 0.05, inputs['Cl_des'][0] + 0.055, 0.005)
+            self.xf.reset_bls()
+            _, cl, cd, _, _ = self.xf.cseq(inputs['Cl_des'][0] - 0.05, inputs['Cl_des'][0] + 0.055, 0.005)
             outputs['Cd'] = np.interp(inputs['Cl_des'][0], cl, cd)
         else:
             outputs['Cd'] = cd
