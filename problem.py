@@ -1,12 +1,15 @@
 import numpy as np
 import openmdao.api as om
+import os
 import time
+
+from multiprocessing import TimeoutError
+from multiprocessing.pool import ThreadPool
+from xfoil import XFoil
+from xfoil.model import Airfoil
 
 from cst import cst, fit
 from util import cosspace
-
-from xfoil import XFoil
-from xfoil.model import Airfoil
 
 try:
     from mpi4py import MPI
@@ -44,6 +47,10 @@ def fit_coords(n_a_u, n_a_l):
 
 class XFoilComp(om.ExplicitComponent):
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._pool = ThreadPool(processes=1)
+
     def initialize(self):
         self.options.declare('n_u', default=6, types=int)
         self.options.declare('n_l', default=6, types=int)
@@ -69,7 +76,19 @@ class XFoilComp(om.ExplicitComponent):
 
         self.declare_partials('*', '*', method='fd')
 
+    @staticmethod
+    def worker(xf, cl_spec):
+        _, cd, _, _ = xf.cl(cl_spec)
+        if np.isnan(cd):
+            xf.reset_bls()
+            _, cl, cd, _, _ = xf.cseq(cl_spec - 0.05, cl_spec + 0.055, 0.005)
+            return np.interp(cl_spec, cl, cd)
+        else:
+            return cd
+
     def compute(self, inputs, outputs, **kwargs):
+        t0 = time.time()
+
         n_coords = self.options['n_coords']
         xf = self.options['xfoil']
 
@@ -78,19 +97,28 @@ class XFoilComp(om.ExplicitComponent):
         y_l = cst(x, inputs['A_l'])
 
         xf.airfoil = Airfoil(x=np.concatenate((x[-1:0:-1], x)), y=np.concatenate((y_u[-1:0:-1], y_l)))
-        xf.filter()
-        xf.repanel()
+        # xf.filter()
+        xf.repanel(n_nodes=240)
         xf.Re = inputs['Re'][0]
         xf.M = inputs['M'][0]
         xf.max_iter = 200
 
-        _, cd, _, _ = xf.cl(inputs['Cl_des'][0])
-        if np.isnan(cd):
-            xf.reset_bls()
-            _, cl, cd, _, _ = xf.cseq(inputs['Cl_des'][0] - 0.05, inputs['Cl_des'][0] + 0.055, 0.005)
-            outputs['Cd'] = np.interp(inputs['Cl_des'][0], cl, cd)
-        else:
-            outputs['Cd'] = cd
+        future = self._pool.apply_async(XFoilComp.worker, args=(xf, inputs['Cl_des'][0]))
+        cd = np.nan
+        try:
+            cd = future.get(timeout=1)
+        except TimeoutError:
+            pass
+        outputs['Cd'] = 1e27 if np.isnan(cd) else cd
+
+        dt = time.time() - t0
+        # print(f'{rank:02d} :: ' +
+        #       'A_u: {}, '.format(np.array2string(inputs['A_u'], precision=4, suppress_small=True,
+        #                                          separator=' ', formatter={'float': '{: 7.4f}'.format})) +
+        #       'A_l: {}, '.format(np.array2string(inputs['A_l'], precision=4, suppress_small=True,
+        #                                          separator=' ', formatter={'float': '{: 7.4f}'.format})) +
+        #       f'C_d: {cd: 7.4f}, dt: {dt:6.3f}'
+        #       )
 
 
 class Geom(om.ExplicitComponent):
@@ -123,16 +151,16 @@ class Geom(om.ExplicitComponent):
         outputs['A_cs'] = np.trapz(dy.flatten(), x.flatten())
 
 
-if __name__ == '__main__':
-    n_a_u = 5
-    n_a_l = 5
+def main():
+    n_a_u = 3
+    n_a_l = 3
 
     # A_u_lower = np.array([0.15] + (n_a_u - 1) * [0.])
     # A_u_upper = np.array(n_a_u * [0.6])
     # A_l_lower = np.array(n_a_l * [-0.6])
     # A_l_upper = np.array([-0.1] + (n_a_l - 2) * [0.1] + [0.35])
 
-    A_u_lower = np.zeros(n_a_u)
+    A_u_lower = -np.ones(n_a_u)  # np.zeros(n_a_u)
     A_u_upper = np.ones(n_a_u)
     A_l_lower = -np.ones(n_a_l)
     A_l_upper = np.ones(n_a_l)
@@ -150,20 +178,26 @@ if __name__ == '__main__':
     ivc.add_output('t_c_0', val=0.0)
     ivc.add_output('A_cs_0', val=0.0)
 
-    prob = om.Problem()
-    prob.driver = driver = om.ScipyOptimizeDriver()
-    driver.options['optimizer'] = 'SLSQP'
-    driver.options['tol'] = 1e-4
-    driver.options['disp'] = True
-    driver.options['debug_print'] = ['objs']
-    driver.add_recorder(om.SqliteRecorder('dump.sql'))
+    prob = om.Problem()  # model=om.Group(num_par_fd=10))
+    prob.driver = driver = om.SimpleGADriver(bits={'A_u': 10, 'A_l': 10}, run_parallel=run_parallel, max_gen=20)
 
-    prob.set_solver_print(2)
+    # prob.driver = driver = om.ScipyOptimizeDriver()
+    # driver.options['optimizer'] = 'SLSQP'
+    # driver.options['tol'] = 1e-4
+    # driver.options['disp'] = True
+    # driver.options['debug_print'] = ['objs']
+    # driver.add_recorder(om.SqliteRecorder('dump.sql'))
+
+    if rank == 0:
+        prob.set_solver_print(2)
+    else:
+        prob.set_solver_print(-1)
 
     prob.model.add_subsystem('ivc', ivc, promotes=['*'])
-    prob.model.add_subsystem('XFoil', XFoilComp(n_u=n_a_u, n_l=n_a_l, num_par_fd=n_a_u + n_a_l), promotes=['*'])
+    prob.model.add_subsystem('XFoil', XFoilComp(n_u=n_a_u, n_l=n_a_l), promotes=['*'])
     prob.model.add_subsystem('Geom', Geom(n_u=n_a_u, n_l=n_a_l), promotes=['*'])
-    prob.model.add_subsystem('F', om.ExecComp('obj = Cl_Cd_0 * Cd / Cl_des', obj=1, Cl_Cd_0=1, Cd=1., Cl_des=1.),
+    prob.model.add_subsystem('F', om.ExecComp('obj = Cl_Cd_0 * Cd / Cl_des',
+                                              obj=1, Cl_Cd_0=1, Cd=1., Cl_des=1.),
                              promotes=['*'])
     prob.model.add_subsystem('G1', om.ExecComp('g1 = 1 - t_c / t_c_0', g1=0., t_c=1., t_c_0=1.), promotes=['*'])
     prob.model.add_subsystem('G2', om.ExecComp('g2 = 1 - A_cs / A_cs_0', g2=0, A_cs=1., A_cs_0=1.), promotes=['*'])
@@ -174,7 +208,7 @@ if __name__ == '__main__':
     prob.model.add_constraint('g1', upper=0.)
     prob.model.add_constraint('g2', upper=0.)
 
-    prob.model.approx_totals(method='fd', step=1e-2)
+    prob.model.approx_totals(method='fd', step=1e-5)  # method='fd', step=1e-2)
     prob.setup()
 
     # Run for initial point
@@ -182,40 +216,63 @@ if __name__ == '__main__':
     prob['Cl_Cd_0'] = prob['Cl_des'] / prob['Cd']
     prob['t_c_0'] = prob['t_c']
     prob['A_cs_0'] = prob['A_cs']
-    print('Initial point:')
-    print('A_u: ' + np.array2string(prob['A_u'], formatter=formatter)[1:-2])
-    print('A_l: ' + np.array2string(prob['A_l'], formatter=formatter)[1:-2])
-    print('t/c: {: 8.3f}, A_cs: {: 8.3f}'.format(prob['t_c'][0], prob['A_cs'][0]))
-    print('Cl/Cd: {}'.format(prob['Cl_des'] / prob['Cd']))
+    if rank == 0:
+        print('Initial point:')
+        print('A_u: ' + np.array2string(prob['A_u'], formatter=formatter)[1:-2])
+        print('A_l: ' + np.array2string(prob['A_l'], formatter=formatter)[1:-2])
+        print('t/c: {: 8.3f}, A_cs: {: 8.3f}'.format(prob['t_c'][0], prob['A_cs'][0]))
+        print('Cl/Cd: {}'.format(prob['Cl_des'] / prob['Cd']))
 
     # Optimize
     prob.run_driver()
-    print('Optimized:')
-    print('A_u: ' + np.array2string(prob['A_u'], formatter=formatter)[1:-2])
-    print('A_l: ' + np.array2string(prob['A_l'], formatter=formatter)[1:-2])
-    print('Cl/Cd: {}'.format(prob['Cl_des'] / prob['Cd']))
+    if rank == 0:
+        print('Optimized:')
+        print('A_u: ' + np.array2string(prob['A_u'], formatter=formatter)[1:-2])
+        print('A_l: ' + np.array2string(prob['A_l'], formatter=formatter)[1:-2])
+        print('Cl/Cd: {}'.format(prob['Cl_des'] / prob['Cd']))
 
-    # Write optimized geometry to dat file
-    x = np.reshape(cosspace(0, 1), (-1, 1))
-    y_u = cst(x, prob['A_u'])
-    y_l = cst(x, prob['A_l'])
-    coords_u = np.concatenate((x, y_u), axis=1)
-    coords_l = np.concatenate((x, y_l), axis=1)
-    coords = np.concatenate((np.flip(coords_u[1:], axis=0), coords_l))
+        # Write optimized geometry to dat file
+        x = np.reshape(cosspace(0, 1), (-1, 1))
+        y_u = cst(x, prob['A_u'])
+        y_l = cst(x, prob['A_l'])
+        coords_u = np.concatenate((x, y_u), axis=1)
+        coords_l = np.concatenate((x, y_l), axis=1)
+        coords = np.concatenate((np.flip(coords_u[1:], axis=0), coords_l))
 
-    fmt_str = 2 * ('{: >' + str(6 + 1) + '.' + str(6) + 'f} ') + '\n'
-    with open('optimized.dat', 'w') as f:
-        for i in range(coords.shape[0]):
-            f.write(fmt_str.format(coords[i, 0], coords[i, 1]))
+        fmt_str = 2 * ('{: >' + str(6 + 1) + '.' + str(6) + 'f} ') + '\n'
+        with open('optimized.dat', 'w') as f:
+            for i in range(coords.shape[0]):
+                f.write(fmt_str.format(coords[i, 0], coords[i, 1]))
 
-    import matplotlib.pyplot as plt
-    plt.plot(coords_orig[:, 0], coords_orig[:, 1], 'k', coords[:, 0], coords[:, 1], 'r')
-    plt.axis('equal')
-    plt.legend(['Original', 'Optimized'])
-    plt.show()
+    if os.environ.get('PLOT_RESULTS') and rank == 0:
+        import matplotlib.pyplot as plt
+        plt.plot(coords_orig[:, 0], coords_orig[:, 1], 'k', coords[:, 0], coords[:, 1], 'r')
+        plt.axis('equal')
+        plt.legend(['Original', 'Optimized'])
+        plt.show()
 
     # Cleanup the problem and exit
     prob.cleanup()
 
-    print('Took {} seconds'.format(time.time() - t0))
+    if rank == 0:
+        print('Took {} seconds'.format(time.time() - t0))
     exit(0)
+
+
+if __name__ == '__main__':
+    main()
+    exit(0)
+
+    import matplotlib.pyplot as plt
+
+    x = np.reshape(cosspace(0, 1), (-1, 1))
+    y_u = cst(x, [ 0.19530792,  0.31612903,  0.4674486])
+    y_l = cst(x, [-0.10244379, -0.04506354,  0.0844086])
+    coords_u = np.concatenate((x, y_u), axis=1)
+    coords_l = np.concatenate((x, y_l), axis=1)
+    coords = np.concatenate((np.flip(coords_u[1:], axis=0), coords_l))
+
+    plt.plot(coords_orig[:, 0], coords_orig[:, 1], 'k', coords[:, 0], coords[:, 1], 'r')
+    plt.axis('equal')
+    plt.legend(['Original', 'Optimized'])
+    plt.show()
