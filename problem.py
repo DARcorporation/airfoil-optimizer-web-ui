@@ -1,8 +1,6 @@
 import numpy as np
-import os
+import openmdao.api as om
 import time
-
-from openmdao.api import Problem, IndepVarComp, ScipyOptimizeDriver, ExecComp, SqliteRecorder, ExplicitComponent
 
 from cst import cst, fit
 from util import cosspace
@@ -10,23 +8,41 @@ from util import cosspace
 from xfoil import XFoil
 from xfoil.model import Airfoil
 
+try:
+    from mpi4py import MPI
+except ImportError:
+    MPI = None
+
+if not MPI:
+    run_parallel = False
+    rank = 0
+else:
+    run_parallel = True
+    rank = MPI.COMM_WORLD.rank
+
 formatter = {'float_kind': lambda x: '{: 10.8f}'.format(x)}
 
-n_a_u = 5
-n_a_l = 5
+coords_file = 'naca0012.dat'
+with open(coords_file, 'r') as f:
+    lines = f.readlines()[2:]
 
-# A_u_lower = np.array([0.15] + (n_a_u - 1) * [0.])
-# A_u_upper = np.array(n_a_u * [0.6])
-# A_l_lower = np.array(n_a_l * [-0.6])
-# A_l_upper = np.array([-0.1] + (n_a_l - 2) * [0.1] + [0.35])
-
-A_u_lower = np.zeros(n_a_u)
-A_u_upper = np.ones(n_a_u)
-A_l_lower = -np.ones(n_a_l)
-A_l_upper = np.ones(n_a_l)
+coords_orig = np.zeros((len(lines), 2))
+for i in range(len(lines)):
+    coords_orig[i, :] = np.fromstring(lines[i], dtype=float, count=2, sep=' ')
+# coords_orig = np.loadtxt('naca0012.dat', skiprows=1)
 
 
-class XFoilComp(ExplicitComponent):
+def fit_coords(n_a_u, n_a_l):
+    i_0 = np.argmin(coords_orig[:, 0])
+    coords_u = coords_orig[:i_0 + 1, :]
+    coords_l = coords_orig[i_0:, :]
+
+    A_u, _ = fit(coords_u[:, 0], coords_u[:, 1], n_a_u, delta=(0., 0.))
+    A_l, _ = fit(coords_l[:, 0], coords_l[:, 1], n_a_l, delta=(0., 0.))
+    return A_u, A_l
+
+
+class XFoilComp(om.ExplicitComponent):
 
     def initialize(self):
         self.options.declare('n_u', default=6, types=int)
@@ -68,16 +84,16 @@ class XFoilComp(ExplicitComponent):
         xf.M = inputs['M'][0]
         xf.max_iter = 200
 
-        _, cd, _ = xf.cl(inputs['Cl_des'][0])
+        _, cd, _, _ = xf.cl(inputs['Cl_des'][0])
         if np.isnan(cd):
             xf.reset_bls()
-            _, cl, cd, _ = xf.cseq(inputs['Cl_des'][0] - 0.05, inputs['Cl_des'][0] + 0.055, 0.005)
+            _, cl, cd, _, _ = xf.cseq(inputs['Cl_des'][0] - 0.05, inputs['Cl_des'][0] + 0.055, 0.005)
             outputs['Cd'] = np.interp(inputs['Cl_des'][0], cl, cd)
         else:
             outputs['Cd'] = cd
 
 
-class Geom(ExplicitComponent):
+class Geom(om.ExplicitComponent):
 
     def initialize(self):
         self.options.declare('n_u', default=6, types=int)
@@ -107,41 +123,24 @@ class Geom(ExplicitComponent):
         outputs['A_cs'] = np.trapz(dy.flatten(), x.flatten())
 
 
-def naca(spec):
-    coords_file = 'naca{}.dat'.format(spec)
-
-    # Write the Xfoil command file
-    with open('temp', 'w') as f:
-        f.write('naca {}\n'.format(spec))
-        f.write('save {}\ny\n'.format(coords_file))
-        f.write('quit\n')
-
-    os.system('xfoil.exe < temp')
-    time.sleep(1)
-
-    if os.path.isfile(coords_file):
-        with open(coords_file, 'r') as f:
-            lines = f.readlines()[2:]
-
-        coords = np.zeros((len(lines), 2))
-        for i in range(len(lines)):
-            coords[i, :] = np.fromstring(lines[i], dtype=float, count=2, sep=' ')
-
-        i_0 = np.argmin(coords[:, 0])
-        coords_u = coords[:i_0 + 1, :]
-        coords_l = coords[i_0:, :]
-
-        A_u, _ = fit(coords_u[:, 0], coords_u[:, 1], n_a_u, delta=(0., 0.))
-        A_l, _ = fit(coords_l[:, 0], coords_l[:, 1], n_a_l, delta=(0., 0.))
-        return A_u, A_l, coords
-    return None
-
-
 if __name__ == '__main__':
-    t0 = time.time()
-    A_u, A_l, coords_orig = naca('0012')
+    n_a_u = 5
+    n_a_l = 5
 
-    ivc = IndepVarComp()
+    # A_u_lower = np.array([0.15] + (n_a_u - 1) * [0.])
+    # A_u_upper = np.array(n_a_u * [0.6])
+    # A_l_lower = np.array(n_a_l * [-0.6])
+    # A_l_upper = np.array([-0.1] + (n_a_l - 2) * [0.1] + [0.35])
+
+    A_u_lower = np.zeros(n_a_u)
+    A_u_upper = np.ones(n_a_u)
+    A_l_lower = -np.ones(n_a_l)
+    A_l_upper = np.ones(n_a_l)
+
+    t0 = time.time()
+    A_u, A_l = fit_coords(n_a_u, n_a_l)
+
+    ivc = om.IndepVarComp()
     ivc.add_output('A_u', val=A_u)
     ivc.add_output('A_l', val=A_l)
     ivc.add_output('Re', val=1e6)
@@ -151,23 +150,23 @@ if __name__ == '__main__':
     ivc.add_output('t_c_0', val=0.0)
     ivc.add_output('A_cs_0', val=0.0)
 
-    prob = Problem()
-    prob.driver = ScipyOptimizeDriver()
-    prob.driver.options['optimizer'] = 'SLSQP'
-    prob.driver.options['tol'] = 1e-4
-    prob.driver.options['disp'] = True
-    prob.driver.options['debug_print'] = ['objs']
-    prob.driver.add_recorder(SqliteRecorder('dump.sql'))
+    prob = om.Problem()
+    prob.driver = driver = om.ScipyOptimizeDriver()
+    driver.options['optimizer'] = 'SLSQP'
+    driver.options['tol'] = 1e-4
+    driver.options['disp'] = True
+    driver.options['debug_print'] = ['objs']
+    driver.add_recorder(om.SqliteRecorder('dump.sql'))
 
     prob.set_solver_print(2)
 
     prob.model.add_subsystem('ivc', ivc, promotes=['*'])
-    prob.model.add_subsystem('XFoil', XFoilComp(n_u=n_a_u, n_l=n_a_l), promotes=['*'])
+    prob.model.add_subsystem('XFoil', XFoilComp(n_u=n_a_u, n_l=n_a_l, num_par_fd=n_a_u + n_a_l), promotes=['*'])
     prob.model.add_subsystem('Geom', Geom(n_u=n_a_u, n_l=n_a_l), promotes=['*'])
-    prob.model.add_subsystem('F', ExecComp('obj = Cl_Cd_0 * Cd / Cl_des', obj=1, Cl_Cd_0=1, Cd=1., Cl_des=1.),
+    prob.model.add_subsystem('F', om.ExecComp('obj = Cl_Cd_0 * Cd / Cl_des', obj=1, Cl_Cd_0=1, Cd=1., Cl_des=1.),
                              promotes=['*'])
-    prob.model.add_subsystem('G1', ExecComp('g1 = 1 - t_c / t_c_0', g1=0., t_c=1., t_c_0=1.), promotes=['*'])
-    prob.model.add_subsystem('G2', ExecComp('g2 = 1 - A_cs / A_cs_0', g2=0, A_cs=1., A_cs_0=1.), promotes=['*'])
+    prob.model.add_subsystem('G1', om.ExecComp('g1 = 1 - t_c / t_c_0', g1=0., t_c=1., t_c_0=1.), promotes=['*'])
+    prob.model.add_subsystem('G2', om.ExecComp('g2 = 1 - A_cs / A_cs_0', g2=0, A_cs=1., A_cs_0=1.), promotes=['*'])
 
     prob.model.add_design_var('A_u', lower=A_u_lower, upper=A_u_upper)
     prob.model.add_design_var('A_l', lower=A_l_lower, upper=A_l_upper)
