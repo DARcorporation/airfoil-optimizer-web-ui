@@ -5,6 +5,7 @@ import time
 
 from multiprocessing import TimeoutError
 from multiprocessing.pool import ThreadPool
+from random import SystemRandom
 from xfoil import XFoil
 from xfoil.model import Airfoil
 
@@ -151,21 +152,23 @@ class Geom(om.ExplicitComponent):
         outputs['A_cs'] = np.trapz(dy.flatten(), x.flatten())
 
 
-def main():
-    n_a_u = 3
-    n_a_l = 3
+def get_problem(n_a_u, n_a_l, seed=None):
+    if rank == 0:
+        if seed is None:
+            seed = int(SystemRandom().random() * (2 ** 31 - 1))
+        print(f'SimpleGADriver_seed: {seed}')
+        os.environ['SimpleGADriver_seed'] = str(seed)
 
     # A_u_lower = np.array([0.15] + (n_a_u - 1) * [0.])
     # A_u_upper = np.array(n_a_u * [0.6])
     # A_l_lower = np.array(n_a_l * [-0.6])
     # A_l_upper = np.array([-0.1] + (n_a_l - 2) * [0.1] + [0.35])
 
-    A_u_lower = -np.ones(n_a_u)  # np.zeros(n_a_u)
+    A_u_lower = np.zeros(n_a_u)
     A_u_upper = np.ones(n_a_u)
     A_l_lower = -np.ones(n_a_l)
     A_l_upper = np.ones(n_a_l)
 
-    t0 = time.time()
     A_u, A_l = fit_coords(n_a_u, n_a_l)
 
     ivc = om.IndepVarComp()
@@ -211,52 +214,98 @@ def main():
     prob.model.approx_totals(method='fd', step=1e-5)  # method='fd', step=1e-2)
     prob.setup()
 
-    # Run for initial point
+    def __repr__(problem):
+        s = f'Obj: {problem["obj"][0]:6.4f}, L/D: {problem["Cl_des"] / problem["Cd"]:6.2f}, \n' \
+            f'A_u: {np.array2string(problem["A_u"], formatter=formatter)[1:-2]}, \n' \
+            f'A_l: {np.array2string(problem["A_l"], formatter=formatter)[1:-2]}'
+        return s
+
+    prob.__repr__ = __repr__
+
+    return prob
+
+
+def print_problem(prob, dt):
+    print(str(prob))
+    print(f'Took {dt} seconds.')
+
+
+def analyze(prob):
+    t0 = time.time()
     prob.run_model()
+    dt = time.time() - t0
+
     prob['Cl_Cd_0'] = prob['Cl_des'] / prob['Cd']
     prob['t_c_0'] = prob['t_c']
     prob['A_cs_0'] = prob['A_cs']
-    if rank == 0:
-        print('Initial point:')
-        print('A_u: ' + np.array2string(prob['A_u'], formatter=formatter)[1:-2])
-        print('A_l: ' + np.array2string(prob['A_l'], formatter=formatter)[1:-2])
-        print('t/c: {: 8.3f}, A_cs: {: 8.3f}'.format(prob['t_c'][0], prob['A_cs'][0]))
-        print('Cl/Cd: {}'.format(prob['Cl_des'] / prob['Cd']))
 
-    # Optimize
+    if rank == 0:
+        print_problem(prob, dt)
+
+    return prob
+
+
+def optimize(prob):
+    t0 = time.time()
     prob.run_driver()
+    dt = time.time() - t0
+
     if rank == 0:
         print('Optimized:')
-        print('A_u: ' + np.array2string(prob['A_u'], formatter=formatter)[1:-2])
-        print('A_l: ' + np.array2string(prob['A_l'], formatter=formatter)[1:-2])
-        print('Cl/Cd: {}'.format(prob['Cl_des'] / prob['Cd']))
+        print_problem(prob, dt)
 
-        # Write optimized geometry to dat file
-        x = np.reshape(cosspace(0, 1), (-1, 1))
-        y_u = cst(x, prob['A_u'])
-        y_l = cst(x, prob['A_l'])
-        coords_u = np.concatenate((x, y_u), axis=1)
-        coords_l = np.concatenate((x, y_l), axis=1)
-        coords = np.concatenate((np.flip(coords_u[1:], axis=0), coords_l))
+    return prob
 
-        fmt_str = 2 * ('{: >' + str(6 + 1) + '.' + str(6) + 'f} ') + '\n'
-        with open('optimized.dat', 'w') as f:
-            for i in range(coords.shape[0]):
-                f.write(fmt_str.format(coords[i, 0], coords[i, 1]))
 
-    if os.environ.get('PLOT_RESULTS') and rank == 0:
-        import matplotlib.pyplot as plt
-        plt.plot(coords_orig[:, 0], coords_orig[:, 1], 'k', coords[:, 0], coords[:, 1], 'r')
-        plt.axis('equal')
+def get_coords(prob):
+    x = np.reshape(cosspace(0, 1), (-1, 1))
+    y_u = cst(x, prob['A_u'])
+    y_l = cst(x, prob['A_l'])
+    coords_u = np.concatenate((x, y_u), axis=1)
+    coords_l = np.concatenate((x, y_l), axis=1)
+    coords = np.concatenate((np.flip(coords_u[1:], axis=0), coords_l))
+
+    return coords
+
+
+def plot(prob_or_coords, show_legend=False, show_title=True):
+    import matplotlib.pyplot as plt
+
+    if isinstance(prob_or_coords, om.Problem):
+        coords = get_coords(prob_or_coords)
+    elif isinstance(prob_or_coords, np.ndarray):
+        coords = prob_or_coords
+    else:
+        raise ValueError('First argument must be either an OpenMDAO Problem or a nunpy.ndarray')
+
+    plt.plot(coords_orig[:, 0], coords_orig[:, 1], 'k', coords[:, 0], coords[:, 1], 'r')
+    plt.axis('scaled')
+    if show_legend:
         plt.legend(['Original', 'Optimized'])
-        plt.show()
+    if show_title and isinstance(prob_or_coords, om.Problem):
+        plt.title(str(prob_or_coords))
+    plt.show()
 
-    # Cleanup the problem and exit
-    prob.cleanup()
 
+def post_process(prob):
+    # Write optimized geometry to dat file
+    coords = get_coords(prob)
+
+    fmt_str = 2 * ('{: >' + str(6 + 1) + '.' + str(6) + 'f} ') + '\n'
+    with open('optimized.dat', 'w') as f:
+        for i in range(coords.shape[0]):
+            f.write(fmt_str.format(coords[i, 0], coords[i, 1]))
+
+    if os.environ.get('PLOT_RESULTS'):
+        plot(coords)
+
+
+def main():
+    prob = get_problem(3, 3)
+    analyze(prob)
+    optimize(prob)
     if rank == 0:
-        print('Took {} seconds'.format(time.time() - t0))
-    exit(0)
+        post_process(prob)
 
 
 if __name__ == '__main__':
