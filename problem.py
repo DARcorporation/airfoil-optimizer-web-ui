@@ -152,81 +152,87 @@ class Geom(om.ExplicitComponent):
         outputs['A_cs'] = np.trapz(dy.flatten(), x.flatten())
 
 
+class AirfoilOptProblem(om.Problem):
+
+    def __init__(self, n_a_u, n_a_l, seed=None):
+        if rank == 0:
+            if seed is None:
+                seed = int(SystemRandom().random() * (2 ** 31 - 1))
+            print(f'SimpleGADriver_seed: {seed}')
+            os.environ['SimpleGADriver_seed'] = str(seed)
+
+        # A_u_lower = np.array([0.15] + (n_a_u - 1) * [0.])
+        # A_u_upper = np.array(n_a_u * [0.6])
+        # A_l_lower = np.array(n_a_l * [-0.6])
+        # A_l_upper = np.array([-0.1] + (n_a_l - 2) * [0.1] + [0.35])
+
+        A_u_lower = np.zeros(n_a_u)
+        A_u_upper = np.ones(n_a_u)
+        A_l_lower = -np.ones(n_a_l)
+        A_l_upper = np.ones(n_a_l)
+
+        A_u, A_l = fit_coords(n_a_u, n_a_l)
+
+        ivc = om.IndepVarComp()
+        ivc.add_output('A_u', val=A_u)
+        ivc.add_output('A_l', val=A_l)
+        ivc.add_output('Re', val=1e6)
+        ivc.add_output('M', val=0.)
+        ivc.add_output('Cl_des', val=1.0)
+        ivc.add_output('Cl_Cd_0', val=1.)
+        ivc.add_output('t_c_0', val=0.0)
+        ivc.add_output('A_cs_0', val=0.0)
+
+        driver = om.SimpleGADriver(bits={'A_u': 10, 'A_l': 10}, run_parallel=run_parallel, max_gen=20)
+
+        # prob.driver = driver = om.ScipyOptimizeDriver()
+        # driver.options['optimizer'] = 'SLSQP'
+        # driver.options['tol'] = 1e-4
+        # driver.options['disp'] = True
+        # driver.options['debug_print'] = ['objs']
+        # driver.add_recorder(om.SqliteRecorder('dump.sql'))
+
+        model = om.Group()   # model=om.Group(num_par_fd=10))
+        model.add_subsystem('ivc', ivc, promotes=['*'])
+        model.add_subsystem('XFoil', XFoilComp(n_u=n_a_u, n_l=n_a_l), promotes=['*'])
+        model.add_subsystem('Geom', Geom(n_u=n_a_u, n_l=n_a_l), promotes=['*'])
+        model.add_subsystem('F', om.ExecComp('obj = Cl_Cd_0 * Cd / Cl_des',
+                                             obj=1, Cl_Cd_0=1, Cd=1., Cl_des=1.), promotes=['*'])
+        model.add_subsystem('G1', om.ExecComp('g1 = 1 - t_c / t_c_0', g1=0., t_c=1., t_c_0=1.), promotes=['*'])
+        model.add_subsystem('G2', om.ExecComp('g2 = 1 - A_cs / A_cs_0', g2=0, A_cs=1., A_cs_0=1.), promotes=['*'])
+
+        model.add_design_var('A_u', lower=A_u_lower, upper=A_u_upper)
+        model.add_design_var('A_l', lower=A_l_lower, upper=A_l_upper)
+        model.add_objective('obj')
+        model.add_constraint('g1', upper=0.)
+        model.add_constraint('g2', upper=0.)
+
+        model.approx_totals(method='fd', step=1e-5)  # method='fd', step=1e-2)
+
+        super().__init__(model=model, driver=driver)
+
+    def __repr__(self):
+        s = ''
+        s += f'Obj: {self["obj"][0]:6.4f}, L/D: {self["Cl_des"][0] / self["Cd"][0]:6.2f}, \n'
+        s += f'A_u: {np.array2string(self["A_u"], formatter=formatter, separator=", ")}, \n'
+        s += f'A_l: {np.array2string(self["A_l"], formatter=formatter, separator=", ")}'
+        return s
+
+
 def get_problem(n_a_u, n_a_l, seed=None):
-    if rank == 0:
-        if seed is None:
-            seed = int(SystemRandom().random() * (2 ** 31 - 1))
-        print(f'SimpleGADriver_seed: {seed}')
-        os.environ['SimpleGADriver_seed'] = str(seed)
-
-    # A_u_lower = np.array([0.15] + (n_a_u - 1) * [0.])
-    # A_u_upper = np.array(n_a_u * [0.6])
-    # A_l_lower = np.array(n_a_l * [-0.6])
-    # A_l_upper = np.array([-0.1] + (n_a_l - 2) * [0.1] + [0.35])
-
-    A_u_lower = np.zeros(n_a_u)
-    A_u_upper = np.ones(n_a_u)
-    A_l_lower = -np.ones(n_a_l)
-    A_l_upper = np.ones(n_a_l)
-
-    A_u, A_l = fit_coords(n_a_u, n_a_l)
-
-    ivc = om.IndepVarComp()
-    ivc.add_output('A_u', val=A_u)
-    ivc.add_output('A_l', val=A_l)
-    ivc.add_output('Re', val=1e6)
-    ivc.add_output('M', val=0.)
-    ivc.add_output('Cl_des', val=1.0)
-    ivc.add_output('Cl_Cd_0', val=1.)
-    ivc.add_output('t_c_0', val=0.0)
-    ivc.add_output('A_cs_0', val=0.0)
-
-    prob = om.Problem()  # model=om.Group(num_par_fd=10))
-    prob.driver = driver = om.SimpleGADriver(bits={'A_u': 10, 'A_l': 10}, run_parallel=run_parallel, max_gen=20)
-
-    # prob.driver = driver = om.ScipyOptimizeDriver()
-    # driver.options['optimizer'] = 'SLSQP'
-    # driver.options['tol'] = 1e-4
-    # driver.options['disp'] = True
-    # driver.options['debug_print'] = ['objs']
-    # driver.add_recorder(om.SqliteRecorder('dump.sql'))
+    prob = AirfoilOptProblem(n_a_u, n_a_l, seed)
+    prob.setup()
 
     if rank == 0:
         prob.set_solver_print(2)
     else:
         prob.set_solver_print(-1)
 
-    prob.model.add_subsystem('ivc', ivc, promotes=['*'])
-    prob.model.add_subsystem('XFoil', XFoilComp(n_u=n_a_u, n_l=n_a_l), promotes=['*'])
-    prob.model.add_subsystem('Geom', Geom(n_u=n_a_u, n_l=n_a_l), promotes=['*'])
-    prob.model.add_subsystem('F', om.ExecComp('obj = Cl_Cd_0 * Cd / Cl_des',
-                                              obj=1, Cl_Cd_0=1, Cd=1., Cl_des=1.),
-                             promotes=['*'])
-    prob.model.add_subsystem('G1', om.ExecComp('g1 = 1 - t_c / t_c_0', g1=0., t_c=1., t_c_0=1.), promotes=['*'])
-    prob.model.add_subsystem('G2', om.ExecComp('g2 = 1 - A_cs / A_cs_0', g2=0, A_cs=1., A_cs_0=1.), promotes=['*'])
-
-    prob.model.add_design_var('A_u', lower=A_u_lower, upper=A_u_upper)
-    prob.model.add_design_var('A_l', lower=A_l_lower, upper=A_l_upper)
-    prob.model.add_objective('obj')
-    prob.model.add_constraint('g1', upper=0.)
-    prob.model.add_constraint('g2', upper=0.)
-
-    prob.model.approx_totals(method='fd', step=1e-5)  # method='fd', step=1e-2)
-    prob.setup()
-
-    def __repr__(problem):
-        s = f'Obj: {problem["obj"][0]:6.4f}, L/D: {problem["Cl_des"] / problem["Cd"]:6.2f}, \n' \
-            f'A_u: {np.array2string(problem["A_u"], formatter=formatter)[1:-2]}, \n' \
-            f'A_l: {np.array2string(problem["A_l"], formatter=formatter)[1:-2]}'
-        return s
-
-    prob.__repr__ = __repr__
-
     return prob
 
 
 def print_problem(prob, dt):
-    print(str(prob))
+    print(prob.__repr__())
     print(f'Took {dt} seconds.')
 
 
@@ -238,6 +244,8 @@ def analyze(prob):
     prob['Cl_Cd_0'] = prob['Cl_des'] / prob['Cd']
     prob['t_c_0'] = prob['t_c']
     prob['A_cs_0'] = prob['A_cs']
+
+    prob.run_model()
 
     if rank == 0:
         print_problem(prob, dt)
@@ -311,8 +319,6 @@ def main():
 if __name__ == '__main__':
     main()
     exit(0)
-
-    import matplotlib.pyplot as plt
 
     x = np.reshape(cosspace(0, 1), (-1, 1))
     y_u = cst(x, [ 0.19530792,  0.31612903,  0.4674486])
