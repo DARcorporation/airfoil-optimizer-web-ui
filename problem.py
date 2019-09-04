@@ -263,16 +263,17 @@ def print_problem(prob, dt):
     print(f'Time elapsed: {timedelta(seconds=dt)}')
 
 
-def analyze(prob):
+def analyze(prob, initial=True):
     t0 = time.time()
     prob.run_model()
     dt = time.time() - t0
 
-    prob['Cl_Cd_0'] = prob['Cl_des'] / prob['Cd']
-    prob['t_c_0'] = prob['t_c']
-    prob['A_cs_0'] = prob['A_cs']
+    if initial:
+        prob['Cl_Cd_0'] = prob['Cl_des'] / prob['Cd']
+        prob['t_c_0'] = prob['t_c']
+        prob['A_cs_0'] = prob['A_cs']
 
-    prob.run_model()
+        prob.run_model()
 
     if rank == 0:
         print_problem(prob, dt)
@@ -286,7 +287,6 @@ def optimize(prob):
     dt = time.time() - t0
 
     if rank == 0:
-        print('Optimized:')
         print_problem(prob, dt)
 
     return prob
@@ -341,6 +341,8 @@ def main():
     optimize(prob)
     if rank == 0:
         post_process(prob)
+    import sys
+    sys.exit(0)
 
 
 if __name__ == '__main__':
