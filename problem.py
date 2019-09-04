@@ -3,6 +3,7 @@ import openmdao.api as om
 import os
 import time
 
+from datetime import timedelta
 from multiprocessing import TimeoutError
 from multiprocessing.pool import ThreadPool
 from random import SystemRandom
@@ -61,6 +62,8 @@ class XFoilComp(om.ExplicitComponent):
 
         self.options.declare('n_coords', default=100, types=int)
 
+        self.options.declare('print', default=False, types=bool)
+
         xf = XFoil()
         xf.print = False
         self.options.declare('xfoil', default=xf, types=XFoil)
@@ -117,13 +120,15 @@ class XFoilComp(om.ExplicitComponent):
         outputs['Cd'] = 1e27 if np.isnan(cd) else cd
 
         dt = time.time() - t0
-        # print(f'{rank:02d} :: ' +
-        #       'A_u: {}, '.format(np.array2string(inputs['A_u'], precision=4, suppress_small=True,
-        #                                          separator=' ', formatter={'float': '{: 7.4f}'.format})) +
-        #       'A_l: {}, '.format(np.array2string(inputs['A_l'], precision=4, suppress_small=True,
-        #                                          separator=' ', formatter={'float': '{: 7.4f}'.format})) +
-        #       f'C_d: {cd: 7.4f}, dt: {dt:6.3f}'
-        #       )
+        if self.options['print']:
+            print(f'{rank:02d} :: ' +
+                  'A_u: {}, '.format(np.array2string(inputs['A_u'], precision=4, suppress_small=True,
+                                                     separator=' ', formatter={'float': '{: 7.4f}'.format})) +
+                  'A_l: {}, '.format(np.array2string(inputs['A_l'], precision=4, suppress_small=True,
+                                                     separator=' ', formatter={'float': '{: 7.4f}'.format})) +
+                  f'δ_te: {inputs["delta_te"][0]: 6.4f}, ' +
+                  f'C_d: {cd: 7.4f}, dt: {dt:6.3f}'
+                  )
 
 
 class Geom(om.ExplicitComponent):
@@ -240,7 +245,7 @@ def get_problem(n_a_u, n_a_l, seed=None):
 
 def print_problem(prob, dt):
     print(prob.__repr__())
-    print(f'Took {dt} seconds.')
+    print(f'Time elapsed: {timedelta(seconds=dt)}')
 
 
 def analyze(prob):
