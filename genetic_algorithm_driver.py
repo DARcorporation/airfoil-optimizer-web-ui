@@ -648,7 +648,9 @@ class GeneticAlgorithm(object):
             min_x = x_pop[min_index]
 
             if rank == 0:
-                print(f'min_fit: {min_fit:7.4f}, min_x: {min_x}')
+                x_mean = np.mean(x_pop, axis=0)
+                std = (np.sum(np.sum((x_pop - x_mean) ** 2, axis=1)) / (x_pop.shape[0] - 1.)) ** 0.5
+                print(f'min_fit: {min_fit:7.4f}, min_x: {min_x}, σ: {std}')
 
             if min_fit < fopt:
                 fopt = min_fit
