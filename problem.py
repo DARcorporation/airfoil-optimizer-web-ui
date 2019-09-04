@@ -85,14 +85,18 @@ class XFoilComp(om.ExplicitComponent):
         self.declare_partials('*', '*', method='fd')
 
     @staticmethod
-    def worker(xf, cl_spec):
-        _, cd, _, _ = xf.cl(cl_spec)
-        if np.isnan(cd):
-            xf.reset_bls()
-            _, cl, cd, _, _ = xf.cseq(cl_spec - 0.05, cl_spec + 0.055, 0.005)
-            return np.interp(cl_spec, cl, cd)
-        else:
-            return cd
+    def worker(xf, cl_spec, delta, n):
+        if n < 1:
+            raise ValueError('n needs to be at least 1.')
+
+        cd = np.nan
+        if delta is None or delta < 0.01 or n == 1:
+            _, cd, _, _ = xf.cl(cl_spec)
+        elif delta is not None:
+            _, cl, cd, _, _ = xf.cseq(cl_spec - delta / 2., cl_spec + delta / 2., delta / float(n))
+            cd = np.interp(cl_spec, cl, cd)
+
+        return cd
 
     def compute(self, inputs, outputs, **kwargs):
         t0 = time.time()
@@ -111,13 +115,24 @@ class XFoilComp(om.ExplicitComponent):
         xf.M = inputs['M'][0]
         xf.max_iter = 200
 
-        future = self._pool.apply_async(XFoilComp.worker, args=(xf, inputs['Cl_des'][0]))
-        cd = np.nan
+        future = self._pool.apply_async(XFoilComp.worker, args=(xf, inputs['Cl_des'][0], 0.05, 3))
         try:
-            cd = future.get(timeout=1)
+            cd = future.get(timeout=10.)
+            xf.reset_bls()
         except TimeoutError:
             pass
-        outputs['Cd'] = 1e27 if np.isnan(cd) else cd
+
+        # delta = 0.0
+        # delta_max = 0.1
+        # cd = np.nan
+        # while np.isnan(cd) and delta <= delta_max:
+        #     future = self._pool.apply_async(XFoilComp.worker, args=(xf, inputs['Cl_des'][0], delta))
+        #     try:
+        #         cd = future.get(timeout=0.5)
+        #     except TimeoutError:
+        #         pass
+        #     delta += 0.05
+        outputs['Cd'] = cd if not np.isnan(cd) else 1e27
 
         dt = time.time() - t0
         if self.options['print']:
