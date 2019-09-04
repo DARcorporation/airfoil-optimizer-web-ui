@@ -27,23 +27,26 @@ else:
 formatter = {'float_kind': lambda x: '{: 10.8f}'.format(x)}
 
 coords_file = 'naca0012.dat'
-with open(coords_file, 'r') as f:
-    lines = f.readlines()[2:]
+# with open(coords_file, 'r') as f:
+#     lines = f.readlines()[1:]
+#
+# coords_orig = np.zeros((len(lines), 2))
+# for i in range(len(lines)):
+#     coords_orig[i, :] = np.fromstring(lines[i], dtype=float, count=2, sep=' ')
+coords_orig = np.loadtxt('naca0012.dat', skiprows=1)
 
-coords_orig = np.zeros((len(lines), 2))
-for i in range(len(lines)):
-    coords_orig[i, :] = np.fromstring(lines[i], dtype=float, count=2, sep=' ')
-# coords_orig = np.loadtxt('naca0012.dat', skiprows=1)
+i_0_orig = np.argmin(coords_orig[:, 0])
+coords_orig_u = np.flipud(coords_orig[:i_0_orig + 1, :])
+coords_orig_l = coords_orig[i_0_orig:, :]
+delta_te_orig = coords_orig_u[-1, 1] - coords_orig_l[-1, 1]
 
 
 def fit_coords(n_a_u, n_a_l):
-    i_0 = np.argmin(coords_orig[:, 0])
-    coords_u = coords_orig[:i_0 + 1, :]
-    coords_l = coords_orig[i_0:, :]
+    A_u, delta_u = fit(coords_orig_u[:, 0], coords_orig_u[:, 1], n_a_u)
+    A_l, delta_l = fit(coords_orig_l[:, 0], coords_orig_l[:, 1], n_a_l)
 
-    A_u, _ = fit(coords_u[:, 0], coords_u[:, 1], n_a_u, delta=(0., 0.))
-    A_l, _ = fit(coords_l[:, 0], coords_l[:, 1], n_a_l, delta=(0., 0.))
-    return A_u, A_l
+    delta_te = delta_u[1] - delta_l[1]
+    return A_u, A_l, delta_te
 
 
 class XFoilComp(om.ExplicitComponent):
