@@ -577,7 +577,7 @@ class GeneticAlgorithm(object):
 
         # Main Loop
         nfit = 0
-        gen_iter = range(max_gen + 1) if rank == 0 else tqdm(range(max_gen + 1))
+        gen_iter = range(max_gen + 1) if rank == 0 else tqdm(range(max_gen + 1), ascii=True)
         for generation in gen_iter:
             old_gen = copy.deepcopy(new_gen)
             x_pop = self.decode(old_gen, vlb, vub, bits)
