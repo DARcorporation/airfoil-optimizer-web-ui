@@ -71,6 +71,7 @@ class XFoilComp(om.ExplicitComponent):
 
         self.add_input('A_u', shape=n_u)
         self.add_input('A_l', shape=n_l)
+        self.add_input('delta_te', shape=1)
 
         self.add_input('Cl_des', val=1.)
         self.add_input('Re', val=1e6)
@@ -97,8 +98,8 @@ class XFoilComp(om.ExplicitComponent):
         xf = self.options['xfoil']
 
         x = cosspace(0, 1, n_coords)
-        y_u = cst(x, inputs['A_u'])
-        y_l = cst(x, inputs['A_l'])
+        y_u = cst(x, inputs['A_u'], delta=(0, inputs['delta_te'] / 2))
+        y_l = cst(x, inputs['A_l'], delta=(0, -inputs['delta_te'] / 2))
 
         xf.airfoil = Airfoil(x=np.concatenate((x[-1:0:-1], x)), y=np.concatenate((y_u[-1:0:-1], y_l)))
         # xf.filter()
@@ -139,6 +140,7 @@ class Geom(om.ExplicitComponent):
 
         self.add_input('A_u', shape=n_u)
         self.add_input('A_l', shape=n_l)
+        self.add_input('delta_te', shape=1)
 
         self.add_output('t_c', val=0.)
         self.add_output('A_cs', val=0.)
@@ -147,8 +149,8 @@ class Geom(om.ExplicitComponent):
         n_coords = self.options['n_coords']
 
         x = np.reshape(cosspace(0, 1, n_coords), (-1, 1))
-        y_u = cst(x, inputs['A_u'])
-        y_l = cst(x, inputs['A_l'])
+        y_u = cst(x, inputs['A_u'], delta=(0, inputs['delta_te'] / 2))
+        y_l = cst(x, inputs['A_l'], delta=(0, -inputs['delta_te'] / 2))
         dy = y_u - y_l
 
         outputs['t_c'] = np.max(dy)
@@ -174,17 +176,18 @@ class AirfoilOptProblem(om.Problem):
         A_l_lower = -np.ones(n_a_l)
         A_l_upper = np.ones(n_a_l)
 
-        A_u, A_l = fit_coords(n_a_u, n_a_l)
+        A_u, A_l, delta_te = fit_coords(n_a_u, n_a_l)
 
         ivc = om.IndepVarComp()
         ivc.add_output('A_u', val=A_u)
         ivc.add_output('A_l', val=A_l)
+        ivc.add_output('delta_te', val=delta_te)
         ivc.add_output('Re', val=1e6)
         ivc.add_output('M', val=0.)
-        ivc.add_output('Cl_des', val=1.0)
+        ivc.add_output('Cl_des', val=1.)
         ivc.add_output('Cl_Cd_0', val=1.)
-        ivc.add_output('t_c_0', val=0.0)
-        ivc.add_output('A_cs_0', val=0.0)
+        ivc.add_output('t_c_0', val=1.)
+        ivc.add_output('A_cs_0', val=1.)
 
         driver = om.SimpleGADriver(bits={'A_u': 10, 'A_l': 10}, run_parallel=run_parallel, max_gen=20)
 
@@ -218,7 +221,8 @@ class AirfoilOptProblem(om.Problem):
         s = ''
         s += f'Obj: {self["obj"][0]:6.4f}, L/D: {self["Cl_des"][0] / self["Cd"][0]:6.2f}, \n'
         s += f'A_u: {np.array2string(self["A_u"], formatter=formatter, separator=", ")}, \n'
-        s += f'A_l: {np.array2string(self["A_l"], formatter=formatter, separator=", ")}'
+        s += f'A_l: {np.array2string(self["A_l"], formatter=formatter, separator=", ")}, \n'
+        s += f'δ_te: {self["delta_te"][0]: 6.4f}'
         return s
 
 
@@ -270,8 +274,8 @@ def optimize(prob):
 
 def get_coords(prob):
     x = np.reshape(cosspace(0, 1), (-1, 1))
-    y_u = cst(x, prob['A_u'])
-    y_l = cst(x, prob['A_l'])
+    y_u = cst(x, prob['A_u'], delta=(0, prob['delta_te'] / 2))
+    y_l = cst(x, prob['A_l'], delta=(0, -prob['delta_te'] / 2))
     coords_u = np.concatenate((x, y_u), axis=1)
     coords_l = np.concatenate((x, y_l), axis=1)
     coords = np.concatenate((np.flip(coords_u[1:], axis=0), coords_l))
