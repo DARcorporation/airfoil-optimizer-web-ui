@@ -108,6 +108,11 @@ class XFoilComp(om.ExplicitComponent):
         y_u = cst(x, inputs['A_u'], delta=(0, inputs['delta_te'] / 2))
         y_l = cst(x, inputs['A_l'], delta=(0, -inputs['delta_te'] / 2))
 
+        # If the lower and upper curves swap, this is a bad, self-intersecting airfoil. Return 1e27 immediately.
+        if np.any(y_l > y_u):
+            outputs['Cd'] = 1e27
+            return
+
         xf.airfoil = Airfoil(x=np.concatenate((x[-1:0:-1], x)), y=np.concatenate((y_u[-1:0:-1], y_l)))
         xf.repanel(n_nodes=300, cv_par=2.0, cte_ratio=0.5)
         xf.Re = inputs['Re'][0]
