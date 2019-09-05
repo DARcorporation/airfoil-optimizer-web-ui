@@ -281,6 +281,10 @@ class XFoilComp(AirfoilComponent):
                 f'C_d: {cd: 7.4f}, dt: {dt:6.3f}'
             )
 
+    def cleanup(self):
+        del self.options['_xf']
+        del self.options['_pool']
+
 
 class Geom(AirfoilComponent):
     """
@@ -547,13 +551,17 @@ def write(prob, filename='optimized.dat'):
 
 def main():
     """
-    Create, analyze, and optimize airfoil, then write optimized airfoil coordinates to a file.
+    Create, analyze, optimize airfoil, and write optimized coordinates to a file. Then clean the problem up and exit.
     """
     prob = get_problem(3, 3)
     analyze(prob)
     optimize(prob)
     if rank == 0:
         write(prob)
+
+    prob.cleanup()
+    del prob
+
     import sys
     sys.exit(0)
 
