@@ -111,6 +111,8 @@ class XFoilComp(om.ExplicitComponent):
         # If the lower and upper curves swap, this is a bad, self-intersecting airfoil. Return 1e27 immediately.
         if np.any(y_l > y_u):
             outputs['Cd'] = 1e27
+            if self.options['print']:
+                print(f'{rank:02d} :: SELF-INTERSECTING AIRFOIL')
             return
 
         xf.airfoil = Airfoil(x=np.concatenate((x[-1:0:-1], x)), y=np.concatenate((y_u[-1:0:-1], y_l)))
