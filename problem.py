@@ -109,7 +109,6 @@ class XFoilComp(om.ExplicitComponent):
         y_l = cst(x, inputs['A_l'], delta=(0, -inputs['delta_te'] / 2))
 
         xf.airfoil = Airfoil(x=np.concatenate((x[-1:0:-1], x)), y=np.concatenate((y_u[-1:0:-1], y_l)))
-        # xf.filter()
         xf.repanel(n_nodes=300, cv_par=2.0, cte_ratio=0.5)
         xf.Re = inputs['Re'][0]
         xf.M = inputs['M'][0]
