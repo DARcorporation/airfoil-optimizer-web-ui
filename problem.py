@@ -137,8 +137,8 @@ class XFoilComp(om.ExplicitComponent):
         n_c = self.options['n_c']
         n_t = self.options['n_t']
 
-        self.add_input('A_c', shape=n_c)
-        self.add_input('A_t', shape=n_t)
+        self.add_input('a_c', shape=n_c)
+        self.add_input('a_t', shape=n_t)
         self.add_input('t_te', shape=1)
 
         self.add_input('Cl_des', val=1.)
@@ -155,7 +155,7 @@ class XFoilComp(om.ExplicitComponent):
         n_coords = self.options['n_coords']
         xf = self.options['xfoil']
 
-        x, y_u, y_l = cst2coords(inputs['A_c'], inputs['A_t'], inputs['t_te'][0], n_coords)
+        x, y_u, y_l = cst2coords(inputs['a_c'], inputs['a_t'], inputs['t_te'][0], n_coords)
         cd = analyze_airfoil(x, y_u, y_l,
                              inputs['Cl_des'][0], inputs['Re'][0], inputs['M'][0],
                              xf, self.options['print'])
@@ -164,9 +164,9 @@ class XFoilComp(om.ExplicitComponent):
         dt = time.time() - t0
         if self.options['print']:
             print(f'{rank:02d} :: ' +
-                  'A_c: {}, '.format(np.array2string(inputs['A_c'], precision=4, suppress_small=True,
+                  'a_c: {}, '.format(np.array2string(inputs['a_c'], precision=4, suppress_small=True,
                                                      separator=', ', formatter={'float': '{: 7.4f}'.format})) +
-                  'A_t: {}, '.format(np.array2string(inputs['A_t'], precision=4, suppress_small=True,
+                  'a_t: {}, '.format(np.array2string(inputs['a_t'], precision=4, suppress_small=True,
                                                      separator=', ', formatter={'float': '{: 7.4f}'.format})) +
                   f't_te: {inputs["t_te"][0]: 6.4f}, ' +
                   f'C_d: {cd: 7.4f}, dt: {dt:6.3f}'
@@ -185,8 +185,8 @@ class Geom(om.ExplicitComponent):
         n_c = self.options['n_c']
         n_t = self.options['n_t']
 
-        self.add_input('A_c', shape=n_c)
-        self.add_input('A_t', shape=n_t)
+        self.add_input('a_c', shape=n_c)
+        self.add_input('a_t', shape=n_t)
         self.add_input('t_te', shape=1)
 
         self.add_output('t_c', val=0.)
@@ -194,7 +194,7 @@ class Geom(om.ExplicitComponent):
 
     def compute(self, inputs, outputs, discrete_inputs=None, discrete_outputs=None):
         n_coords = self.options['n_coords']
-        x, _, t, _, _ = cst2coords(inputs['A_c'], inputs['A_t'], inputs['t_te'][0], n_coords, True)
+        x, _, t, _, _ = cst2coords(inputs['a_c'], inputs['a_t'], inputs['t_te'][0], n_coords, True)
         outputs['t_c'] = np.max(t)
         outputs['A_cs'] = np.trapz(t, x)
 
@@ -216,8 +216,8 @@ class AirfoilOptProblem(om.Problem):
         a_c, a_t, t_te = fit_coords(n_a_c, n_a_t)
 
         ivc = om.IndepVarComp()
-        ivc.add_output('A_c', val=a_c)
-        ivc.add_output('A_t', val=a_t)
+        ivc.add_output('a_c', val=a_c)
+        ivc.add_output('a_t', val=a_t)
         ivc.add_output('t_te', val=t_te)
         ivc.add_output('Re', val=1e6)
         ivc.add_output('M', val=0.)
@@ -226,7 +226,7 @@ class AirfoilOptProblem(om.Problem):
         ivc.add_output('t_c_0', val=1.)
         ivc.add_output('A_cs_0', val=1.)
 
-        driver = om.SimpleGADriver(bits={'A_c': 10, 'A_t': 10}, run_parallel=run_parallel, max_gen=19)
+        driver = om.SimpleGADriver(bits={'a_c': 10, 'a_t': 10}, run_parallel=run_parallel, max_gen=19)
 
         # prob.driver = driver = om.ScipyOptimizeDriver()
         # driver.options['optimizer'] = 'SLSQP'
@@ -244,8 +244,8 @@ class AirfoilOptProblem(om.Problem):
         model.add_subsystem('G1', om.ExecComp('g1 = 1 - t_c / t_c_0', g1=0., t_c=1., t_c_0=1.), promotes=['*'])
         model.add_subsystem('G2', om.ExecComp('g2 = 1 - A_cs / A_cs_0', g2=0, A_cs=1., A_cs_0=1.), promotes=['*'])
 
-        model.add_design_var('A_c', lower=a_c_lower, upper=a_c_upper)
-        model.add_design_var('A_t', lower=a_t_lower, upper=a_t_upper)
+        model.add_design_var('a_c', lower=a_c_lower, upper=a_c_upper)
+        model.add_design_var('a_t', lower=a_t_lower, upper=a_t_upper)
         model.add_objective('obj')
         model.add_constraint('g1', upper=0.)
         model.add_constraint('g2', upper=0.)
@@ -257,8 +257,8 @@ class AirfoilOptProblem(om.Problem):
     def __repr__(self):
         s = ''
         s += f'Obj: {self["obj"][0]:6.4f}, C_d: {self["Cd"][0]:6.4f}, \n'
-        s += f'A_c: {np.array2string(self["A_c"], formatter=formatter, separator=", ")}, \n'
-        s += f'A_t: {np.array2string(self["A_t"], formatter=formatter, separator=", ")}, \n'
+        s += f'a_c: {np.array2string(self["a_c"], formatter=formatter, separator=", ")}, \n'
+        s += f'a_t: {np.array2string(self["a_t"], formatter=formatter, separator=", ")}, \n'
         s += f't_te: {self["t_te"][0]: 6.4f}'
         return s
 
@@ -310,7 +310,7 @@ def optimize(prob):
 
 
 def get_coords(prob):
-    x, y_u, y_l = cst2coords(prob['A_c'], prob['A_t'], prob['t_te'], 100)
+    x, y_u, y_l = cst2coords(prob['a_c'], prob['a_t'], prob['t_te'], 100)
     x = np.reshape(x, (-1, 1))
     y_u = np.reshape(y_u, (-1, 1))
     y_l = np.reshape(y_l, (-1, 1))
