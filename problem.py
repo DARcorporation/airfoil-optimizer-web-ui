@@ -327,7 +327,7 @@ def post_process(prob):
             f.write(fmt_str.format(coords[i, 0], coords[i, 1]))
 
     if os.environ.get('PLOT_RESULTS'):
-        plot(coords)
+        plot(prob)
 
 
 def main():
