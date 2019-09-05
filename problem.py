@@ -28,19 +28,19 @@ else:
 formatter = {'float_kind': lambda x: '{: 10.8f}'.format(x)}
 
 coords_file = 'naca0012.dat'
-coords_orig = np.loadtxt(coords_file, skiprows=1)
+coords_ref = np.loadtxt(coords_file, skiprows=1)
 
-i_0_orig = np.argmin(coords_orig[:, 0])
-coords_orig_u = np.flipud(coords_orig[:i_0_orig + 1, :])
-coords_orig_l = coords_orig[i_0_orig:, :]
-t_te_orig = coords_orig_u[-1, 1] - coords_orig_l[-1, 1]
+i_0_ref = np.argmin(coords_ref[:, 0])
+coords_ref_u = np.flipud(coords_ref[:i_0_ref + 1, :])
+coords_ref_l = coords_ref[i_0_ref:, :]
+t_te_ref = coords_ref_u[-1, 1] - coords_ref_l[-1, 1]
+
+x_ref = coords_ref_u[:, 0]
+y_u_ref = coords_ref_u[:, 1]
+y_l_ref = np.interp(x_ref, coords_ref_l[:, 0], coords_ref_l[:, 1])
 
 
-def fit_coords(n_a_c, n_a_t):
-    x = coords_orig_u[:, 0]
-    y_u = coords_orig_u[:, 1]
-    y_l = np.interp(x, coords_orig_l[:, 0], coords_orig_l[:, 1])
-
+def coords2cst(x, y_u, y_l, n_a_c, n_a_t):
     y_c = (y_u + y_l) / 2
     t = y_u - y_l
 
@@ -213,7 +213,7 @@ class AirfoilOptProblem(om.Problem):
         a_t_lower = 0.01 * np.ones(n_a_t)
         a_t_upper = 0.6 * np.ones(n_a_t)
 
-        a_c, a_t, t_te = fit_coords(n_a_c, n_a_t)
+        a_c, a_t, t_te = coords2cst(x_ref, y_u_ref, y_l_ref, n_a_c, n_a_t)
 
         ivc = om.IndepVarComp()
         ivc.add_output('a_c', val=a_c)
@@ -325,7 +325,7 @@ def plot(prob_or_coords, show_legend=False, show_title=True):
     else:
         raise ValueError('First argument must be either an OpenMDAO Problem or a nunpy.ndarray')
 
-    plt.plot(coords_orig[:, 0], coords_orig[:, 1], 'k', coords[:, 0], coords[:, 1], 'r')
+    plt.plot(coords_ref[:, 0], coords_ref[:, 1], 'k', coords[:, 0], coords[:, 1], 'r')
     plt.axis('scaled')
     if show_legend:
         plt.legend(['Original', 'Optimized'])
