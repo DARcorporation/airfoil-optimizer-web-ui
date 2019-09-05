@@ -133,9 +133,9 @@ class XFoilComp(om.ExplicitComponent):
         if self.options['print']:
             print(f'{rank:02d} :: ' +
                   'A_u: {}, '.format(np.array2string(inputs['A_u'], precision=4, suppress_small=True,
-                                                     separator=' ', formatter={'float': '{: 7.4f}'.format})) +
+                                                     separator=', ', formatter={'float': '{: 7.4f}'.format})) +
                   'A_l: {}, '.format(np.array2string(inputs['A_l'], precision=4, suppress_small=True,
-                                                     separator=' ', formatter={'float': '{: 7.4f}'.format})) +
+                                                     separator=', ', formatter={'float': '{: 7.4f}'.format})) +
                   f'δ_te: {inputs["delta_te"][0]: 6.4f}, ' +
                   f'C_d: {cd: 7.4f}, dt: {dt:6.3f}'
                   )
