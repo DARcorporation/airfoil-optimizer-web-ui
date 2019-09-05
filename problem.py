@@ -50,6 +50,58 @@ def fit_coords(n_a_u, n_a_l):
     return A_u, A_l, delta_te
 
 
+def xfoil_worker(xf, cl_spec, delta, n):
+    if n < 1:
+        raise ValueError('n needs to be at least 1.')
+
+    _, cd, _, _ = xf.cl(cl_spec)
+    if not np.isnan(cd):
+        return cd
+    elif delta is None or delta < 0.01 or n == 1:
+        return cd
+    else:
+        for i in range(n):
+            cl = cl_spec + ((-1.) ** float(i)) * np.ceil(float(i + 1) / 2) * delta
+            _, cd, _, _ = xf.cl(cl)
+            if not np.isnan(cd):
+                _, cd, _, _ = xf.cl(cl_spec)
+                return cd
+    return cd
+
+
+def analyze_airfoil(x, y_u, y_l, cl_des, rey, mach=0, xf=None, show_output=False):
+    clean = False
+    if xf is None:
+        xf = XFoil()
+        xf.print = show_output
+        clean = True
+
+    # If the lower and upper curves swap, this is a bad, self-intersecting airfoil. Return 1e27 immediately.
+    if np.any(y_l > y_u):
+        return np.nan
+    else:
+        xf.airfoil = Airfoil(x=np.concatenate((x[-1:0:-1], x)), y=np.concatenate((y_u[-1:0:-1], y_l)))
+        # xf.repanel(n_nodes=300, cv_par=2.0, cte_ratio=0.5)
+        xf.repanel(n_nodes=240)
+        xf.Re = rey
+        xf.M = mach
+        xf.max_iter = 200
+
+        cd = np.nan
+        with ThreadPool(processes=1) as pool:
+            future = pool.apply_async(xfoil_worker, args=(xf, cl_des, 0.05, 1))
+            try:
+                cd = future.get(timeout=10.)
+                xf.reset_bls()
+            except TimeoutError:
+                pass
+
+    if clean:
+        del xf
+
+    return cd
+
+
 class XFoilComp(om.ExplicitComponent):
 
     def __init__(self, **kwargs):
@@ -84,20 +136,6 @@ class XFoilComp(om.ExplicitComponent):
 
         self.declare_partials('*', '*', method='fd')
 
-    @staticmethod
-    def worker(xf, cl_spec, delta, n):
-        if n < 1:
-            raise ValueError('n needs to be at least 1.')
-
-        cd = np.nan
-        if delta is None or delta < 0.01 or n == 1:
-            _, cd, _, _ = xf.cl(cl_spec)
-        elif delta is not None:
-            _, cl, cd, _, _ = xf.cseq(cl_spec - delta / 2., cl_spec + delta / 2., delta / float(n))
-            cd = np.interp(cl_spec, cl, cd)
-
-        return cd
-
     def compute(self, inputs, outputs, **kwargs):
         t0 = time.time()
 
@@ -108,26 +146,9 @@ class XFoilComp(om.ExplicitComponent):
         y_u = cst(x, inputs['A_u'], delta=(0, inputs['delta_te'] / 2))
         y_l = cst(x, inputs['A_l'], delta=(0, -inputs['delta_te'] / 2))
 
-        # If the lower and upper curves swap, this is a bad, self-intersecting airfoil. Return 1e27 immediately.
-        if np.any(y_l > y_u):
-            outputs['Cd'] = 1e27
-            if self.options['print']:
-                print(f'{rank:02d} :: SELF-INTERSECTING AIRFOIL')
-            return
-
-        xf.airfoil = Airfoil(x=np.concatenate((x[-1:0:-1], x)), y=np.concatenate((y_u[-1:0:-1], y_l)))
-        xf.repanel(n_nodes=300, cv_par=2.0, cte_ratio=0.5)
-        xf.Re = inputs['Re'][0]
-        xf.M = inputs['M'][0]
-        xf.max_iter = 200
-
-        cd = np.nan
-        future = self._pool.apply_async(XFoilComp.worker, args=(xf, inputs['Cl_des'][0], 0.05, 3))
-        try:
-            cd = future.get(timeout=10.)
-            xf.reset_bls()
-        except TimeoutError:
-            pass
+        cd = analyze_airfoil(x, y_u, y_l,
+                             inputs['Cl_des'][0], inputs['Re'][0], inputs['M'][0],
+                             xf, self.options['print'])
         outputs['Cd'] = cd if not np.isnan(cd) else 1e27
 
         dt = time.time() - t0
