@@ -125,17 +125,6 @@ class XFoilComp(om.ExplicitComponent):
             xf.reset_bls()
         except TimeoutError:
             pass
-
-        # delta = 0.0
-        # delta_max = 0.1
-        # cd = np.nan
-        # while np.isnan(cd) and delta <= delta_max:
-        #     future = self._pool.apply_async(XFoilComp.worker, args=(xf, inputs['Cl_des'][0], delta))
-        #     try:
-        #         cd = future.get(timeout=0.5)
-        #     except TimeoutError:
-        #         pass
-        #     delta += 0.05
         outputs['Cd'] = cd if not np.isnan(cd) else 1e27
 
         dt = time.time() - t0
