@@ -121,6 +121,7 @@ class XFoilComp(om.ExplicitComponent):
         xf.M = inputs['M'][0]
         xf.max_iter = 200
 
+        cd = np.nan
         future = self._pool.apply_async(XFoilComp.worker, args=(xf, inputs['Cl_des'][0], 0.05, 3))
         try:
             cd = future.get(timeout=10.)
