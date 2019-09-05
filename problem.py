@@ -145,7 +145,7 @@ def xfoil_worker(xf, cl_spec, delta=None, n=0):
     return cd
 
 
-def analyze_airfoil(x, y_u, y_l, cl, rey, mach=0, xf=None, show_output=False):
+def analyze_airfoil(x, y_u, y_l, cl, rey, mach=0, xf=None, pool=None, show_output=False):
     """
     Analyze an airfoil at a given lift coefficient for given Reynolds and Mach numbers using XFoil.
 
@@ -160,7 +160,9 @@ def analyze_airfoil(x, y_u, y_l, cl, rey, mach=0, xf=None, show_output=False):
     rey, mach : float
         Reynolds and Mach numbers
     xf : XFoil, optional
-        An instance of the XFoil class to use to perform the analysis
+        An instance of the XFoil class to use to perform the analysis. Will be created if not given
+    pool : multiprocessing.ThreadPool, optional
+        An instance of the multiprocessing.Threadpool class used to run the xfoil_worker. Will be created if not given
     show_output : bool, optional
         If True, a debug string will be printed after analyses. False by default.
 
@@ -169,16 +171,21 @@ def analyze_airfoil(x, y_u, y_l, cl, rey, mach=0, xf=None, show_output=False):
     cd : float or np.nan
         The drag coefficient of the airfoil at the specified conditions, or nan if XFoil did not run successfully
     """
-    clean = False
-    if xf is None:
-        xf = XFoil()
-        xf.print = show_output
-        clean = True
-
     # If the lower and upper curves swap, this is a bad, self-intersecting airfoil. Return 1e27 immediately.
     if np.any(y_l > y_u):
         return np.nan
     else:
+        clean_xf = False
+        if xf is None:
+            xf = XFoil()
+            xf.print = show_output
+            clean = True
+
+        clean_pool = False
+        if pool is None:
+            pool = ThreadPool(processes=1)
+            clean = True
+
         xf.airfoil = Airfoil(x=np.concatenate((x[-1:0:-1], x)), y=np.concatenate((y_u[-1:0:-1], y_l)))
         # xf.repanel(n_nodes=300, cv_par=2.0, cte_ratio=0.5)
         xf.repanel(n_nodes=240)
@@ -187,16 +194,17 @@ def analyze_airfoil(x, y_u, y_l, cl, rey, mach=0, xf=None, show_output=False):
         xf.max_iter = 200
 
         cd = np.nan
-        with ThreadPool(processes=1) as pool:
-            future = pool.apply_async(xfoil_worker, args=(xf, cl, 0.05, 1))
-            try:
-                cd = future.get(timeout=10.)
-                xf.reset_bls()
-            except TimeoutError:
-                pass
+        future = pool.apply_async(xfoil_worker, args=(xf, cl, 0.05, 1))
+        try:
+            cd = future.get(timeout=10.)
+            xf.reset_bls()
+        except TimeoutError:
+            pass
 
-    if clean:
+    if clean_xf:
         del xf
+    if clean_pool:
+        del pool
 
     return cd
 
@@ -240,7 +248,8 @@ class XFoilComp(AirfoilComponent):
 
         xf = XFoil()
         xf.print = False
-        self.options.declare('_xf', default=xf, types=XFoil)
+        self.options.declare('_xf', default=xf, types=XFoil, allow_none=True)
+        self.options.declare('_pool', default=ThreadPool(processes=1), types=ThreadPool, allow_none=True)
 
     def setup(self):
         super().setup()
@@ -258,7 +267,7 @@ class XFoilComp(AirfoilComponent):
 
         t0 = time.time()
         cd = analyze_airfoil(x, y_u, y_l, inputs['Cl_des'][0], inputs['Re'][0], inputs['M'][0],
-                             self.options['_xf'], self.options['print'])
+                             self.options['_xf'], self.options['_pool'], self.options['print'])
         dt = time.time() - t0
 
         outputs['Cd'] = cd if not np.isnan(cd) else 1e27
