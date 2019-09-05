@@ -228,14 +228,7 @@ class AirfoilOptProblem(om.Problem):
 
         driver = om.SimpleGADriver(bits={'a_c': 10, 'a_t': 10}, run_parallel=run_parallel, max_gen=19)
 
-        # prob.driver = driver = om.ScipyOptimizeDriver()
-        # driver.options['optimizer'] = 'SLSQP'
-        # driver.options['tol'] = 1e-4
-        # driver.options['disp'] = True
-        # driver.options['debug_print'] = ['objs']
-        # driver.add_recorder(om.SqliteRecorder('dump.sql'))
-
-        model = om.Group()   # model=om.Group(num_par_fd=10))
+        model = om.Group()
         model.add_subsystem('ivc', ivc, promotes=['*'])
         model.add_subsystem('XFoil', XFoilComp(n_c=n_a_c, n_t=n_a_t), promotes=['*'])
         model.add_subsystem('Geom', Geom(n_c=n_a_c, n_t=n_a_t), promotes=['*'])
