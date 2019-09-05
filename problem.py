@@ -179,12 +179,12 @@ def analyze_airfoil(x, y_u, y_l, cl, rey, mach=0, xf=None, pool=None, show_outpu
         if xf is None:
             xf = XFoil()
             xf.print = show_output
-            clean = True
+            clean_xf = True
 
         clean_pool = False
         if pool is None:
             pool = ThreadPool(processes=1)
-            clean = True
+            clean_pool = True
 
         xf.airfoil = Airfoil(x=np.concatenate((x[-1:0:-1], x)), y=np.concatenate((y_u[-1:0:-1], y_l)))
         # xf.repanel(n_nodes=300, cv_par=2.0, cte_ratio=0.5)
