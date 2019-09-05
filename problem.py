@@ -200,7 +200,7 @@ class AirfoilOptProblem(om.Problem):
         ivc.add_output('Re', val=1e6)
         ivc.add_output('M', val=0.)
         ivc.add_output('Cl_des', val=1.)
-        ivc.add_output('Cl_Cd_0', val=1.)
+        ivc.add_output('Cd_0', val=1.)
         ivc.add_output('t_c_0', val=1.)
         ivc.add_output('A_cs_0', val=1.)
 
@@ -217,8 +217,8 @@ class AirfoilOptProblem(om.Problem):
         model.add_subsystem('ivc', ivc, promotes=['*'])
         model.add_subsystem('XFoil', XFoilComp(n_u=n_a_u, n_l=n_a_l), promotes=['*'])
         model.add_subsystem('Geom', Geom(n_u=n_a_u, n_l=n_a_l), promotes=['*'])
-        model.add_subsystem('F', om.ExecComp('obj = Cl_Cd_0 * Cd / Cl_des',
-                                             obj=1, Cl_Cd_0=1, Cd=1., Cl_des=1.), promotes=['*'])
+        model.add_subsystem('F', om.ExecComp('obj = Cd / Cd_0',
+                                             obj=1, Cd=1., Cd_0=1.), promotes=['*'])
         model.add_subsystem('G1', om.ExecComp('g1 = 1 - t_c / t_c_0', g1=0., t_c=1., t_c_0=1.), promotes=['*'])
         model.add_subsystem('G2', om.ExecComp('g2 = 1 - A_cs / A_cs_0', g2=0, A_cs=1., A_cs_0=1.), promotes=['*'])
 
@@ -234,7 +234,7 @@ class AirfoilOptProblem(om.Problem):
 
     def __repr__(self):
         s = ''
-        s += f'Obj: {self["obj"][0]:6.4f}, L/D: {self["Cl_des"][0] / self["Cd"][0]:6.2f}, \n'
+        s += f'Obj: {self["obj"][0]:6.4f}, C_d: {self["Cd"][0]:6.4f}, \n'
         s += f'A_u: {np.array2string(self["A_u"], formatter=formatter, separator=", ")}, \n'
         s += f'A_l: {np.array2string(self["A_l"], formatter=formatter, separator=", ")}, \n'
         s += f'δ_te: {self["delta_te"][0]: 6.4f}'
@@ -264,7 +264,7 @@ def analyze(prob, initial=True):
     dt = time.time() - t0
 
     if initial:
-        prob['Cl_Cd_0'] = prob['Cl_des'] / prob['Cd']
+        prob['Cd_0'] = prob['Cd']
         prob['t_c_0'] = prob['t_c']
         prob['A_cs_0'] = prob['A_cs']
 
