@@ -28,13 +28,7 @@ else:
 formatter = {'float_kind': lambda x: '{: 10.8f}'.format(x)}
 
 coords_file = 'naca0012.dat'
-# with open(coords_file, 'r') as f:
-#     lines = f.readlines()[1:]
-#
-# coords_orig = np.zeros((len(lines), 2))
-# for i in range(len(lines)):
-#     coords_orig[i, :] = np.fromstring(lines[i], dtype=float, count=2, sep=' ')
-coords_orig = np.loadtxt('naca0012.dat', skiprows=1)
+coords_orig = np.loadtxt(coords_file, skiprows=1)
 
 i_0_orig = np.argmin(coords_orig[:, 0])
 coords_orig_u = np.flipud(coords_orig[:i_0_orig + 1, :])
