@@ -28,8 +28,7 @@ else:
     rank = MPI.COMM_WORLD.rank
 
 # Numpy string formatters
-xfcomp_formatter = {'float_kind': '{: 7.4f}'.format}
-repr_formatter = {'float_kind': '{: 10.8f}'.format}
+array_formatter = {'float_kind': '{: 7.4f}'.format}
 
 # Reference airfoil coordinates
 coords_file = 'naca0012.dat'
@@ -275,8 +274,8 @@ class XFoilComp(AirfoilComponent):
         if self.options['print']:
             print(
                 f'{rank:02d} :: ' +
-                'a_c: {}, '.format(np.array2string(inputs['a_c'], separator=', ', formatter=xfcomp_formatter)) +
-                'a_t: {}, '.format(np.array2string(inputs['a_t'], separator=', ', formatter=xfcomp_formatter)) +
+                'a_c: {}, '.format(np.array2string(inputs['a_c'], separator=', ', formatter=array_formatter)) +
+                'a_t: {}, '.format(np.array2string(inputs['a_t'], separator=', ', formatter=array_formatter)) +
                 f't_te: {inputs["t_te"][0]: 6.4f}, ' +
                 f'C_d: {cd: 7.4f}, dt: {dt:6.3f}'
             )
@@ -364,10 +363,12 @@ class AfOptModel(om.Group):
     def __repr__(self):
         outputs = dict(self.list_outputs(out_stream=None))
         s = ''
-        s += f'Obj: {outputs["F.obj"]["value"][0]:6.4f}, C_d: {outputs["XFoil.Cd"]["value"][0]:6.4f}, \n'
-        s += f'a_c: {np.array2string(outputs["ivc.a_c"]["value"], formatter=repr_formatter, separator=", ")}, \n'
-        s += f'a_t: {np.array2string(outputs["ivc.a_t"]["value"], formatter=repr_formatter, separator=", ")}, \n'
-        s += f't_te: {outputs["ivc.t_te"]["value"][0]: 10.8f}'
+        s += f'Obj: {outputs["F.obj"]["value"][0]:6.4f}, ' \
+             f'C_l_des: {outputs["ivc.Cl_des"]["value"][0]:6.4f}, ' \
+             f'C_d: {outputs["XFoil.Cd"]["value"][0]:6.4f}, \n'
+        s += f'a_c: {np.array2string(outputs["ivc.a_c"]["value"], formatter=array_formatter, separator=", ")}, \n'
+        s += f'a_t: {np.array2string(outputs["ivc.a_t"]["value"], formatter=array_formatter, separator=", ")}, \n'
+        s += f't_te: {outputs["ivc.t_te"]["value"][0]: 7.4f}'
         return s
 
 
