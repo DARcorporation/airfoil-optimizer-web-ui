@@ -648,9 +648,13 @@ class GeneticAlgorithm(object):
             min_x = x_pop[min_index]
 
             if rank == 0:
-                x_mean = np.mean(x_pop, axis=0)
-                std = (np.sum(np.sum((x_pop - x_mean) ** 2, axis=1)) / (x_pop.shape[0] - 1.)) ** 0.5
-                print(f'min_fit: {min_fit:7.4f}, min_x: {min_x}, σ: {std}')
+                n_nan = np.count_nonzero(fitness >= 1e20)
+                _x = x_pop[fitness <= 1e20, :]
+                x_mean = np.mean(_x, axis=0)
+                s_min_x = np.array2string(min_x, precision=4, suppress_small=True,
+                                          separator=', ', formatter={'float': '{: 7.4f}'.format})
+                std = (np.sum(np.sum((_x - x_mean) ** 2, axis=1)) / (_x.shape[0] - 1.)) ** 0.5
+                print(f'min_fit: {min_fit:6.4f}, min_x: {s_min_x}, σ: {std:6.4f}, n_nan: {n_nan}/{fitness.size}')
 
             if min_fit < fopt:
                 fopt = min_fit
