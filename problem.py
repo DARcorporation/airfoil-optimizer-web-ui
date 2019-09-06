@@ -195,7 +195,7 @@ def analyze_airfoil(x, y_u, y_l, cl, rey, mach=0, xf=None, pool=None, show_outpu
         cd = np.nan
         future = pool.apply_async(xfoil_worker, args=(xf, cl, 0.05, 1))
         try:
-            cd = future.get(timeout=10.)
+            cd = future.get(timeout=2.)
             xf.reset_bls()
         except TimeoutError:
             pass
@@ -279,10 +279,6 @@ class XFoilComp(AirfoilComponent):
                 f't_te: {inputs["t_te"][0]: 6.4f}, ' +
                 f'C_d: {cd: 7.4f}, dt: {dt:6.3f}'
             )
-
-    def cleanup(self):
-        del self.options['_xf']
-        del self.options['_pool']
 
 
 class Geom(AirfoilComponent):
@@ -399,7 +395,7 @@ def get_problem(n_c, n_t, fix_te=True, seed=None):
     # Construct the OpenMDAO Problem
     prob = om.Problem()
     prob.model = AfOptModel(n_c=n_c, n_t=n_t, fix_te=fix_te)
-    prob.driver = om.SimpleGADriver(bits={'a_c': 10, 'a_t': 10}, run_parallel=run_parallel, max_gen=99)
+    prob.driver = om.SimpleGADriver(bits={'a_c': 31, 'a_t': 31}, run_parallel=run_parallel, max_gen=300)
     prob.setup()
 
     # Set the reference airfoil as initial conditions
@@ -555,7 +551,7 @@ def main():
     """
     Create, analyze, optimize airfoil, and write optimized coordinates to a file. Then clean the problem up and exit.
     """
-    prob = get_problem(3, 3)
+    prob = get_problem(6, 6)
     analyze(prob)
     optimize(prob)
     if rank == 0:
