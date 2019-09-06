@@ -1,6 +1,7 @@
 import numpy as np
 import openmdao.api as om
 import os
+import sys
 import time
 
 from datetime import timedelta
@@ -123,25 +124,23 @@ def xfoil_worker(xf, cl_spec, delta=None, n=0):
 
     Returns
     -------
-    cd : float or np.nan
-        Drag coefficient or nan if analysis did not complete successfully
+    cd, cm : float or np.nan
+        Drag and moment coefficients or nan if analysis did not complete successfully
     """
     if n < 0:
         raise ValueError('n needs to be larger than zero.')
 
-    _, cd, _, _ = xf.cl(cl_spec)
-    if not np.isnan(cd):
-        return cd
-    elif delta is None or delta < 0.01 or n == 0:
-        return cd
-    else:
+    _, cd, cm, _ = xf.cl(cl_spec)
+    if np.isnan(cd) and delta is not None and delta >= 0.01 and n != 0:
         for i in range(n):
             cl = cl_spec + ((-1.) ** float(i)) * np.ceil(float(i + 1) / 2) * delta
             _, cd, _, _ = xf.cl(cl)
             if not np.isnan(cd):
-                _, cd, _, _ = xf.cl(cl_spec)
-                return cd
-    return cd
+                _, cd, cm, _ = xf.cl(cl_spec)
+                return cd, cm
+    if not np.isnan(cd):
+        _, cd, cm, _ = xf.cl(cl_spec)
+    return cd, cm
 
 
 def analyze_airfoil(x, y_u, y_l, cl, rey, mach=0, xf=None, pool=None, show_output=False):
@@ -167,8 +166,8 @@ def analyze_airfoil(x, y_u, y_l, cl, rey, mach=0, xf=None, pool=None, show_outpu
 
     Returns
     -------
-    cd : float or np.nan
-        The drag coefficient of the airfoil at the specified conditions, or nan if XFoil did not run successfully
+    cd, cm : float or np.nan
+        Drag and moment coefficients of the airfoil at specified conditions, or nan if XFoil did not run successfully
     """
     # If the lower and upper curves swap, this is a bad, self-intersecting airfoil. Return 1e27 immediately.
     if np.any(y_l > y_u):
@@ -192,10 +191,10 @@ def analyze_airfoil(x, y_u, y_l, cl, rey, mach=0, xf=None, pool=None, show_outpu
         xf.M = mach
         xf.max_iter = 200
 
-        cd = np.nan
+        cd, cm = np.nan, np.nan
         future = pool.apply_async(xfoil_worker, args=(xf, cl, 0.05, 1))
         try:
-            cd = future.get(timeout=2.)
+            cd, cm = future.get(timeout=4.)
             xf.reset_bls()
         except TimeoutError:
             pass
@@ -205,7 +204,7 @@ def analyze_airfoil(x, y_u, y_l, cl, rey, mach=0, xf=None, pool=None, show_outpu
     if clean_pool:
         del pool
 
-    return cd
+    return cd, cm
 
 
 class AirfoilComponent(om.ExplicitComponent):
@@ -229,11 +228,15 @@ class AirfoilComponent(om.ExplicitComponent):
         self.add_input('a_t', shape=n_t)
         self.add_input('t_te', shape=1)
 
-    def compute_coords(self, inputs):
+    def compute_coords(self, inputs, precision=None):
         """
         Compute airfoil coordinates from the set of OpenMDAO inputs.
         """
-        return cst2coords(inputs['a_c'], inputs['a_t'], inputs['t_te'][0], self.options['n_coords'])
+        x, y_u, y_l, y_c, t = cst2coords(inputs['a_c'], inputs['a_t'], inputs['t_te'][0], self.options['n_coords'])
+        if precision is not None:
+            return np.round(x, precision), np.round(y_u, precision), np.round(y_l, precision), \
+                   np.round(y_c, precision), np.round(t, precision)
+        return x, y_u, y_l, y_c, t
 
 
 class XFoilComp(AirfoilComponent):
@@ -250,6 +253,8 @@ class XFoilComp(AirfoilComponent):
         self.options.declare('_xf', default=xf, types=XFoil, allow_none=True)
         self.options.declare('_pool', default=ThreadPool(processes=1), types=ThreadPool, allow_none=True)
 
+        self.recording_options['options_excludes'] = ['_xf', '_pool']
+
     def setup(self):
         super().setup()
 
@@ -258,18 +263,22 @@ class XFoilComp(AirfoilComponent):
         self.add_input('Re', val=1e6)
         self.add_input('M', val=0.)
 
+        self.add_input('Cd_0', val=1.)
+
         # Output
         self.add_output('Cd', val=1.)
+        self.add_output('Cm', val=1.)
 
     def compute(self, inputs, outputs, **kwargs):
         x, y_u, y_l, _, _ = self.compute_coords(inputs)
 
         t0 = time.time()
-        cd = analyze_airfoil(x, y_u, y_l, inputs['Cl_des'][0], inputs['Re'][0], inputs['M'][0],
-                             self.options['_xf'], self.options['_pool'], self.options['print'])
+        cd, cm = analyze_airfoil(x, y_u, y_l, inputs['Cl_des'][0], inputs['Re'][0], inputs['M'][0],
+                                 self.options['_xf'], self.options['_pool'], self.options['print'])
         dt = time.time() - t0
 
         outputs['Cd'] = cd if not np.isnan(cd) else 1e27
+        outputs['Cm'] = cm if not np.isnan(cm) else 1e27
 
         if self.options['print']:
             print(
@@ -277,7 +286,7 @@ class XFoilComp(AirfoilComponent):
                 'a_c: {}, '.format(np.array2string(inputs['a_c'], separator=', ', formatter=array_formatter)) +
                 'a_t: {}, '.format(np.array2string(inputs['a_t'], separator=', ', formatter=array_formatter)) +
                 f't_te: {inputs["t_te"][0]: 6.4f}, ' +
-                f'C_d: {cd: 7.4f}, dt: {dt:6.3f}'
+                f'C_d: {cd: 7.4f}, Cm: {cm: 7.4f}, dt: {dt:6.3f}'
             )
 
 
@@ -308,6 +317,10 @@ class AfOptModel(om.Group):
         self.options.declare('n_t', default=6, types=int)
         self.options.declare('fix_te', default=True, types=bool)
 
+        self.options.declare('constrain_thickness', default=True, types=bool)
+        self.options.declare('constrain_area', default=True, types=bool)
+        self.options.declare('constrain_moment', default=True, types=bool)
+
         self.options.declare('n_coords', default=100, types=int)
 
     def setup(self):
@@ -332,16 +345,13 @@ class AfOptModel(om.Group):
         ivc.add_output('M', val=0.)
         ivc.add_output('Cl_des', val=1.)
         ivc.add_output('Cd_0', val=1.)
+        ivc.add_output('Cm_ref', val=1.)
         ivc.add_output('t_c_0', val=1.)
         ivc.add_output('A_cs_0', val=1.)
 
-        # Sub-systems
+        # Main sub-systems
         self.add_subsystem('ivc', ivc, promotes=['*'])
         self.add_subsystem('XFoil', XFoilComp(n_c=n_c, n_t=n_t), promotes=['*'])
-        self.add_subsystem('Geom', Geom(n_c=n_c, n_t=n_t), promotes=['*'])
-        self.add_subsystem('F', om.ExecComp('obj = Cd / Cd_0', obj=1, Cd=1., Cd_0=1.), promotes=['*'])
-        self.add_subsystem('G1', om.ExecComp('g1 = 1 - t_c / t_c_0', g1=0., t_c=1., t_c_0=1.), promotes=['*'])
-        self.add_subsystem('G2', om.ExecComp('g2 = 1 - A_cs / A_cs_0', g2=0, A_cs=1., A_cs_0=1.), promotes=['*'])
 
         # Design variables
         self.add_design_var('a_c', lower=a_c_lower, upper=a_c_upper)
@@ -350,25 +360,46 @@ class AfOptModel(om.Group):
         if not self.options['fix_te']:
             self.add_design_var('t_te', lower=t_te_lower, upper=t_te_upper)
 
-        # Objective and constraints
-        self.add_objective('obj')
+        # Objective
+        self.add_subsystem('F', om.ExecComp('obj = Cd / Cd_0', obj=1, Cd=1., Cd_0=1.), promotes=['*'])
+        self.add_objective('obj')  # Cd
 
-        self.add_constraint('g1', upper=0.)
-        self.add_constraint('g2', upper=0.)
+        # Constraints
+        self.add_subsystem('Geom', Geom(n_c=n_c, n_t=n_t), promotes=['*'])
+
+        if self.options['constrain_thickness']:
+            self.add_subsystem('G1', om.ExecComp('g1 = 1 - t_c / t_c_0', g1=0., t_c=1., t_c_0=1.), promotes=['*'])
+            self.add_constraint('g1', upper=0.)  # t_c >= t_c_0
+
+        if self.options['constrain_area']:
+            self.add_subsystem('G2', om.ExecComp('g2 = 1 - A_cs / A_cs_0', g2=0, A_cs=1., A_cs_0=1.), promotes=['*'])
+            self.add_constraint('g2', upper=0.)  # A_cs >= A_cs_0
+
+        if self.options['constrain_moment']:
+            self.add_subsystem('G3', om.ExecComp('g3 = 1 - abs(Cm) / abs(Cm_ref)',
+                                                 g3=0., Cm=1., Cm_ref=1.), promotes=['*'])
+            self.add_constraint('g3', lower=0.)  # |Cm| <= |Cm_max|
 
     def __repr__(self):
         outputs = dict(self.list_outputs(out_stream=None))
         s = ''
+        s += f'Con.t_c: {"True" if self.options["constrain_thickness"] else "False"}, ' \
+             f'Con.A_cs: {"True" if self.options["constrain_area"] else "False"}. ' \
+             f'Con.Cm: {"True" if self.options["constrain_moment"] else "False"}, \n'
         s += f'Obj: {outputs["F.obj"]["value"][0]:6.4f}, ' \
              f'C_l_des: {outputs["ivc.Cl_des"]["value"][0]:6.4f}, ' \
-             f'C_d: {outputs["XFoil.Cd"]["value"][0]:6.4f}, \n'
+             f'C_m_ref: {outputs["ivc.Cm_ref"]["value"][0]: 7.4f}, \n'
+        s += f'C_d: {outputs["XFoil.Cd"]["value"][0]:6.4f}, ' \
+             f'C_m: {outputs["XFoil.Cm"]["value"][0]: 7.4f}, \n'
         s += f'a_c: {np.array2string(outputs["ivc.a_c"]["value"], formatter=array_formatter, separator=", ")}, \n'
         s += f'a_t: {np.array2string(outputs["ivc.a_t"]["value"], formatter=array_formatter, separator=", ")}, \n'
         s += f't_te: {outputs["ivc.t_te"]["value"][0]: 7.4f}'
         return s
 
 
-def get_problem(n_c, n_t, b_c=8, b_t=8, b_te=8, gen=100, fix_te=True, seed=None):
+def get_problem(n_c, n_t, b_c=8, b_t=8, b_te=8, gen=100,
+                fix_te=True, constrain_thickness=True, constrain_area=True, constrain_moment=True,
+                seed=None, recorder=None):
     """
     Construct an OpenMDAO Problem which minimizes the drag coefficient of an airfoil for a given lift coefficient.
 
@@ -383,8 +414,12 @@ def get_problem(n_c, n_t, b_c=8, b_t=8, b_te=8, gen=100, fix_te=True, seed=None)
         Number of generations to use for the genetic algorithm. 100 by default
     fix_te : bool, optional
         True if the trailing edge thickness should be fixed. True by default
+    constrain_thickness, constrain_area, constrain_moment : bool, optional
+        True if the thickness, area, and/or moment coefficient should be constrained, respectively. All True by default
     seed : int, optional
         Seed to use for the random number generator which creates an initial population for the genetic algorithm
+    recorder : openmdao.api.Recorder, optional
+        Recorder to attach to the driver
 
     Returns
     -------
@@ -403,8 +438,14 @@ def get_problem(n_c, n_t, b_c=8, b_t=8, b_te=8, gen=100, fix_te=True, seed=None)
 
     # Construct the OpenMDAO Problem
     prob = om.Problem()
-    prob.model = AfOptModel(n_c=n_c, n_t=n_t, fix_te=fix_te)
+    prob.model = AfOptModel(n_c=n_c, n_t=n_t,
+                            fix_te=fix_te,
+                            constrain_thickness=constrain_thickness,
+                            constrain_area=constrain_area,
+                            constrain_moment=constrain_moment)
     prob.driver = om.SimpleGADriver(bits=bits, run_parallel=run_parallel, max_gen=gen)
+    if recorder is not None:
+        prob.driver.add_recorder(recorder)
     prob.setup()
 
     # Set the reference airfoil as initial conditions
@@ -428,7 +469,7 @@ def print_problem(prob, dt):
     print(f'Time elapsed: {timedelta(seconds=dt)}')
 
 
-def analyze(prob, initial=True):
+def analyze(prob, initial=True, set_cm_ref=False):
     """
     Simply analyze the airfoil once.
 
@@ -438,6 +479,8 @@ def analyze(prob, initial=True):
         Airfoil optimization problem
     initial : bool, optional
         True if initial references values should be set based on this analysis. True by default.
+    set_cm_ref : bool, optional
+        True if the initial value of Cm should be used for Cm_ref. False by default.
 
     Returns
     -------
@@ -451,6 +494,8 @@ def analyze(prob, initial=True):
         prob['Cd_0'] = prob['Cd']
         prob['t_c_0'] = prob['t_c']
         prob['A_cs_0'] = prob['A_cs']
+        if set_cm_ref:
+            prob['Cm_ref'] = prob['Cm']
 
         prob.run_model()
 
@@ -509,7 +554,7 @@ def get_coords(prob):
     return coords
 
 
-def plot(prob, show_legend=False, show_title=True):
+def plot(prob, show_legend=False, show_title=True, display=False):
     """
     Plot the airfoil represented by the current state of the airfoil optimization problem.
 
@@ -521,12 +566,15 @@ def plot(prob, show_legend=False, show_title=True):
         True if a legend should be shown. False by default
     show_title : bool, optional
         True if a title should be shown based on the current state of the problem. True by default
+    display : bool, optional
+        True if the figure should be displayed. False by default
 
     Returns
     -------
-
+    figure
     """
     import matplotlib.pyplot as plt
+    fig = plt.figure()
     x, y_u, y_l, y_c, _ = cst2coords(prob['a_c'], prob['a_t'], prob['t_te'])
     plt.plot(coords_ref[:, 0], coords_ref[:, 1], 'k',
              x, y_u, 'r', x, y_l, 'r', x, y_c, 'r--')
@@ -535,7 +583,9 @@ def plot(prob, show_legend=False, show_title=True):
         plt.legend(['Original', 'Optimized'])
     if show_title:
         plt.title(prob.model)
-    plt.show()
+    if display:
+        fig.show()
+    return fig
 
 
 def write(prob, filename='optimized.dat'):
@@ -556,12 +606,17 @@ def write(prob, filename='optimized.dat'):
             f.write(fmt_str.format(coords[i, 0], coords[i, 1]))
 
 
-def main(n_c, n_t, b_c=8, b_t=8, b_te=8, gen=100, fix_te=True, seed=None):
+def main(cl, n_c, n_t, b_c=8, b_t=8, b_te=8, gen=100,
+         fix_te=True,
+         constrain_thickness=True, constrain_area=True, constrain_moment=True,
+         cm_ref=None, seed=None):
     """
     Create, analyze, optimize airfoil, and write optimized coordinates to a file. Then clean the problem up and exit.
 
     Parameters
     ----------
+    cl : float
+        Design lift coefficient
     n_c, n_t : int
         Number of CST coefficients for the chord line and thickness distribution, respectively
     b_c, b_t, b_te : int, optional
@@ -571,21 +626,52 @@ def main(n_c, n_t, b_c=8, b_t=8, b_te=8, gen=100, fix_te=True, seed=None):
         Number of generations to use for the genetic algorithm. 100 by default
     fix_te : bool, optional
         True if the trailing edge thickness should be fixed. True by default
+    constrain_thickness, constrain_area, constrain_moment : bool, optional
+        True if the thickness, area, and/or moment coefficient should be constrained, respectively. All True by default
+    cm_ref : float, optional
+        If constrain_moment is True, this will be the maximum (absolute) moment coefficient. If None, initial Cm is used
     seed : int, optional
         Seed to use for the random number generator which creates an initial population for the genetic algorithm
     """
-    prob = get_problem(n_c, n_t, b_c, b_t, b_te, gen, fix_te, seed)
-    analyze(prob)
+    recorder = om.SqliteRecorder('log.sql')
+    recorder._parallel = run_parallel
+    recorder._record_on_proc = True
+
+    prob = get_problem(n_c, n_t, b_c, b_t, b_te, gen,
+                       fix_te, constrain_thickness, constrain_area, constrain_moment,
+                       seed, recorder)
+    prob['Cl_des'] = cl
+    if cm_ref is not None:
+        prob['Cm_ref'] = cm_ref
+
+    analyze(prob, set_cm_ref=(cm_ref is None))
     optimize(prob)
+    recorder.shutdown()
+
     if rank == 0:
-        write(prob)
+        with open('repr.txt', 'w') as f:
+            f.write(prob.model.__repr__())
+        write(prob, filename='optimized.dat')
+        fig = plot(prob)
+        fig.savefig('optimized.png')
 
     prob.cleanup()
     del prob
 
-    import sys
     sys.exit(0)
 
 
 if __name__ == '__main__':
-    main(3, 3)
+    if len(sys.argv) == 14:
+        main(cl=float(sys.argv[1]),
+             n_c=int(sys.argv[2]), n_t=int(sys.argv[3]),
+             b_c=int(sys.argv[4]), b_t=int(sys.argv[5]), b_te=int(sys.argv[6]),
+             gen=int(sys.argv[7]),
+             fix_te=bool(sys.argv[8]),
+             constrain_thickness=bool(sys.argv[9]),
+             constrain_area=bool(sys.argv[10]),
+             constrain_moment=bool(sys.argv[11]),
+             cm_ref=None if sys.argv[12] == 'None' else float(sys.argv[12]),
+             seed=None if sys.argv[13] == 'None' else int(sys.argv[13]))
+    else:
+        main(1., 3, 3, gen=9)
