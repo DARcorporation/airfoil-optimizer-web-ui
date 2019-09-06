@@ -522,8 +522,9 @@ def plot(prob, show_legend=False, show_title=True):
 
     """
     import matplotlib.pyplot as plt
-    coords = get_coords(prob)
-    plt.plot(coords_ref[:, 0], coords_ref[:, 1], 'k', coords[:, 0], coords[:, 1], 'r')
+    x, y_u, y_l, y_c, _ = cst2coords(prob['a_c'], prob['a_t'], prob['t_te'], 100)
+    plt.plot(coords_ref[:, 0], coords_ref[:, 1], 'k',
+             x, y_u, 'r', x, y_l, 'r', x, y_c, 'r--')
     plt.axis('scaled')
     if show_legend:
         plt.legend(['Original', 'Optimized'])
