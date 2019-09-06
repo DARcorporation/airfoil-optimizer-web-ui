@@ -191,7 +191,8 @@ def analyze_airfoil(x, y_u, y_l, cl, rey, mach=0, xf=None, pool=None, show_outpu
         xf.M = mach
         xf.max_iter = 200
 
-        cd, cm = np.nan, np.nan
+        cd = np.nan
+        cm = np.nan
         future = pool.apply_async(xfoil_worker, args=(xf, cl, 0.05, 1))
         try:
             cd, cm = future.get(timeout=4.)
@@ -262,8 +263,6 @@ class XFoilComp(AirfoilComponent):
         self.add_input('Cl_des', val=1.)
         self.add_input('Re', val=1e6)
         self.add_input('M', val=0.)
-
-        self.add_input('Cd_0', val=1.)
 
         # Output
         self.add_output('Cd', val=1.)
@@ -667,10 +666,10 @@ if __name__ == '__main__':
              n_c=int(sys.argv[2]), n_t=int(sys.argv[3]),
              b_c=int(sys.argv[4]), b_t=int(sys.argv[5]), b_te=int(sys.argv[6]),
              gen=int(sys.argv[7]),
-             fix_te=bool(sys.argv[8]),
-             constrain_thickness=bool(sys.argv[9]),
-             constrain_area=bool(sys.argv[10]),
-             constrain_moment=bool(sys.argv[11]),
+             fix_te=(sys.argv[8] == 'True'),
+             constrain_thickness=(sys.argv[9] == 'True'),
+             constrain_area=(sys.argv[10] == 'True'),
+             constrain_moment=(sys.argv[11] == 'True'),
              cm_ref=None if sys.argv[12] == 'None' else float(sys.argv[12]),
              seed=None if sys.argv[13] == 'None' else int(sys.argv[13]))
     else:
