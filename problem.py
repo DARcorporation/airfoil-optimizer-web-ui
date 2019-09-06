@@ -75,7 +75,7 @@ def coords2cst(x, y_u, y_l, n_c, n_t):
     return a_c, a_t, t_te[1]
 
 
-def cst2coords(a_c, a_t, t_te, n_coords):
+def cst2coords(a_c, a_t, t_te, n_coords=100):
     """
     Convert airfoil camber line/thickness distribution CST coefficients to upper/lower curve coordinates.
 
@@ -85,8 +85,8 @@ def cst2coords(a_c, a_t, t_te, n_coords):
         CST coefficients describing the camber line and thickness distribution of the airfoil
     t_te : float
         Airfoil trailing edge thickness
-    n_coords : int
-        Number of x-coordinates to use
+    n_coords : int, optional
+        Number of x-coordinates to use. 100 by default
 
     Returns
     -------
@@ -368,7 +368,7 @@ class AfOptModel(om.Group):
         return s
 
 
-def get_problem(n_c, n_t, fix_te=True, seed=None):
+def get_problem(n_c, n_t, b_c=8, b_t=8, b_te=8, gen=100, fix_te=True, seed=None):
     """
     Construct an OpenMDAO Problem which minimizes the drag coefficient of an airfoil for a given lift coefficient.
 
@@ -376,6 +376,11 @@ def get_problem(n_c, n_t, fix_te=True, seed=None):
     ----------
     n_c, n_t : int
         Number of CST coefficients for the chord line and thickness distribution, respectively
+    b_c, b_t, b_te : int, optional
+        Number of bits to encode each of the CST coefficients of the chord line/thickness distribution, and TE thickness
+        8 bits each by default.
+    gen : int, optional
+        Number of generations to use for the genetic algorithm. 100 by default
     fix_te : bool, optional
         True if the trailing edge thickness should be fixed. True by default
     seed : int, optional
@@ -392,10 +397,14 @@ def get_problem(n_c, n_t, fix_te=True, seed=None):
         print(f'SimpleGADriver_seed: {seed}')
         os.environ['SimpleGADriver_seed'] = str(seed)
 
+    bits = {'a_c': b_c, 'a_t': b_t}
+    if not fix_te:
+        bits = bits.update({'t_te': b_te})
+
     # Construct the OpenMDAO Problem
     prob = om.Problem()
     prob.model = AfOptModel(n_c=n_c, n_t=n_t, fix_te=fix_te)
-    prob.driver = om.SimpleGADriver(bits={'a_c': 31, 'a_t': 31}, run_parallel=run_parallel, max_gen=300)
+    prob.driver = om.SimpleGADriver(bits=bits, run_parallel=run_parallel, max_gen=gen)
     prob.setup()
 
     # Set the reference airfoil as initial conditions
@@ -488,7 +497,7 @@ def get_coords(prob):
     np.ndarray
         (n, 2) array of x-, and y-coordinates of the airfoil in counterclockwise direction
     """
-    x, y_u, y_l, _, _ = cst2coords(prob['a_c'], prob['a_t'], prob['t_te'], 100)
+    x, y_u, y_l, _, _ = cst2coords(prob['a_c'], prob['a_t'], prob['t_te'])
     x = np.reshape(x, (-1, 1))
     y_u = np.reshape(y_u, (-1, 1))
     y_l = np.reshape(y_l, (-1, 1))
@@ -518,7 +527,7 @@ def plot(prob, show_legend=False, show_title=True):
 
     """
     import matplotlib.pyplot as plt
-    x, y_u, y_l, y_c, _ = cst2coords(prob['a_c'], prob['a_t'], prob['t_te'], 100)
+    x, y_u, y_l, y_c, _ = cst2coords(prob['a_c'], prob['a_t'], prob['t_te'])
     plt.plot(coords_ref[:, 0], coords_ref[:, 1], 'k',
              x, y_u, 'r', x, y_l, 'r', x, y_c, 'r--')
     plt.axis('scaled')
@@ -547,11 +556,25 @@ def write(prob, filename='optimized.dat'):
             f.write(fmt_str.format(coords[i, 0], coords[i, 1]))
 
 
-def main():
+def main(n_c, n_t, b_c=8, b_t=8, b_te=8, gen=100, fix_te=True, seed=None):
     """
     Create, analyze, optimize airfoil, and write optimized coordinates to a file. Then clean the problem up and exit.
+
+    Parameters
+    ----------
+    n_c, n_t : int
+        Number of CST coefficients for the chord line and thickness distribution, respectively
+    b_c, b_t, b_te : int, optional
+        Number of bits to encode each of the CST coefficients of the chord line/thickness distribution, and TE thickness
+        8 bits each by default.
+    gen : int, optional
+        Number of generations to use for the genetic algorithm. 100 by default
+    fix_te : bool, optional
+        True if the trailing edge thickness should be fixed. True by default
+    seed : int, optional
+        Seed to use for the random number generator which creates an initial population for the genetic algorithm
     """
-    prob = get_problem(6, 6)
+    prob = get_problem(n_c, n_t, b_c, b_t, b_te, gen, fix_te, seed)
     analyze(prob)
     optimize(prob)
     if rank == 0:
@@ -565,5 +588,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
-    exit(0)
+    main(3, 3)
