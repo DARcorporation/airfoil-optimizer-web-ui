@@ -469,7 +469,7 @@ def problem2string(prob, dt):
     dt : float
         Time in seconds elapsed since last evaluation
     """
-    s = prob.model.__repr__() + '\n'
+    s = prob.model.__repr__() + ',\n'
     if isinstance(prob.driver, om.SimpleGADriver):
         s += f'b_c: {prob.driver.options["bits"]["a_c"]}, '
         s += f'b_t: {prob.driver.options["bits"]["a_t"]}, '
@@ -657,8 +657,12 @@ def main(cl, n_c, n_t, b_c=8, b_t=8, b_te=8, gen=100,
 
     analyze(prob, False, False)
     if rank == 0:
+        s = problem2string(prob, dt)
+        print('Optimized airfoil:')
+        print(s)
+
         with open(config['repr'], 'w') as f:
-            f.write(problem2string(prob, dt))
+            f.write(s)
         write(prob, filename=config['dat'])
         fig = plot(prob)
         fig.savefig(config['png'])
