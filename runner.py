@@ -83,7 +83,7 @@ def run(cl, n_c, n_t, b_c=8, b_t=8, b_te=8, gen=100,
                 server.ehlo()
                 server.login(smtp_settings['user'], smtp_settings['password'])
                 server.sendmail(smtp_settings['user'], smtp_settings['receiver'], msg.as_string())
-                print('Mail sent')
+                print('Email sent')
     except Exception as e:
         print(e)
 
