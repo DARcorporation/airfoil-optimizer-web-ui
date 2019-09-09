@@ -20,8 +20,7 @@ def run(cl, n_c, n_t, b_c=8, b_t=8, b_te=8, gen=100,
         fix_te=True,
         constrain_thickness=True, constrain_area=True, constrain_moment=True,
         cm_ref=None, seed=None, n_proc=28,
-        report=False,
-        results_output_folder=None):
+        run_name=None, report=False):
     """
     Solve the specified optimization problem and handle reporting of results.
 
@@ -46,12 +45,19 @@ def run(cl, n_c, n_t, b_c=8, b_t=8, b_te=8, gen=100,
         Seed to use for the random number generator which creates an initial population for the genetic algorithm
     n_proc : int, optional
         Number of processors to use to evaluate functions in parallel using MPI. 28 by default
+    run_name : str, optional
+        Name of the run. If None, an ISO formatted UTC timestamp will be used.
     report : bool, optional
         True if the results should be reported via email.
-    results_output_folder : str, optional
-        Name of the shared folder in which to store results. By default, an ISO formatted UTC timestamp will be used.
     """
     try:
+        if run_name is None:
+            now = datetime.datetime.utcnow()
+            run_name = now.isoformat(timespec='seconds').replace('-', '').replace(':', '') + 'Z'
+
+        path = os.path.join(os.path.abspath(os.environ['RESULTS_DIR']), run_name)
+        os.mkdir(path)
+
         cmd = ['mpirun', '-np', str(n_proc),
                'python3', 'problem.py',
                str(cl), str(n_c), str(n_t),
