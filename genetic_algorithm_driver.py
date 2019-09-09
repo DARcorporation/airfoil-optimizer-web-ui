@@ -654,7 +654,9 @@ class GeneticAlgorithm(object):
                 s_min_x = np.array2string(min_x, precision=4, suppress_small=True,
                                           separator=', ', formatter={'float': '{: 7.4f}'.format})
                 std = (np.sum(np.sum((_x - x_mean) ** 2, axis=1)) / (_x.shape[0] - 1.)) ** 0.5
-                print(f'min_fit: {min_fit:6.4f}, min_x: {s_min_x}, σ: {std:6.4f}, n_nan: {n_nan}/{fitness.size}')
+                print(f'min_fit: {min_fit:6.4f}, min_x: {s_min_x}, σ: {std:6.4f}, n_nan: {n_nan}/{fitness.size}'
+                      .replace('\n', '')
+                      )
 
             if min_fit < fopt:
                 fopt = min_fit
