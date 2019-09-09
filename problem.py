@@ -466,9 +466,10 @@ def problem2string(prob, dt):
     """
     s = prob.model.__repr__() + '\n'
     if isinstance(prob.driver, om.SimpleGADriver):
-        s += f'b_c: {prob.driver.options["bits"]["a_c"]}, ' +\
-             f'b_t: {prob.driver.options["bits"]["a_t"]}, ' +\
-             f'b_te: {prob.driver.options["bits"]["t_te"]}, \n'
+        s += f'b_c: {prob.driver.options["bits"]["a_c"]}, '
+        s += f'b_t: {prob.driver.options["bits"]["a_t"]}, '
+        if not prob.model.options['fix_te']:
+            s += f'b_te: {prob.driver.options["bits"]["t_te"]}, \n'
     s += f'Time elapsed: {timedelta(seconds=dt)}'
     return s
 
