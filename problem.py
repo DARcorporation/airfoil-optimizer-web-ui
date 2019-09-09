@@ -453,9 +453,9 @@ def get_problem(n_c, n_t, b_c=8, b_t=8, b_te=8, gen=100,
     return prob
 
 
-def print_problem(prob, dt):
+def problem2string(prob, dt):
     """
-    Print a representation of the state of the optimization problem.
+    Return a representation of the state of the optimization problem.
 
     Parameters
     ----------
@@ -464,8 +464,13 @@ def print_problem(prob, dt):
     dt : float
         Time in seconds elapsed since last evaluation
     """
-    print(prob.model.__repr__())
-    print(f'Time elapsed: {timedelta(seconds=dt)}')
+    s = prob.model.__repr__() + '\n'
+    if isinstance(prob.driver, om.SimpleGADriver):
+        s += f'b_c: {prob.driver.options["bits"]["a_c"]}, ' +\
+             f'b_t: {prob.driver.options["bits"]["a_t"]}, ' +\
+             f'b_te: {prob.driver.options["bits"]["t_te"]}, \n'
+    s += f'Time elapsed: {timedelta(seconds=dt)}'
+    return s
 
 
 def analyze(prob, initial=True, set_cm_ref=False):
@@ -499,7 +504,7 @@ def analyze(prob, initial=True, set_cm_ref=False):
         prob.run_model()
 
     if rank == 0:
-        print_problem(prob, dt)
+        print(problem2string(prob, dt))
 
     return prob
 
@@ -522,7 +527,7 @@ def optimize(prob):
     dt = time.time() - t0
 
     if rank == 0:
-        print_problem(prob, dt)
+        print(problem2string(prob, dt))
 
     return prob
 
@@ -644,12 +649,16 @@ def main(cl, n_c, n_t, b_c=8, b_t=8, b_te=8, gen=100,
         prob['Cm_ref'] = cm_ref
 
     analyze(prob, set_cm_ref=(cm_ref is None))
+
+    t0 = time.time()
     optimize(prob)
+    dt = time.time() - t0
+
     recorder.shutdown()
 
     if rank == 0:
         with open('repr.txt', 'w') as f:
-            f.write(prob.model.__repr__())
+            f.write(problem2string(prob, dt))
         write(prob, filename='optimized.dat')
         fig = plot(prob)
         fig.savefig('optimized.png')
