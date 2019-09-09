@@ -491,9 +491,7 @@ def analyze(prob, initial=True, set_cm_ref=False):
     -------
     openmdao.api.Problem
     """
-    t0 = time.time()
     prob.run_model()
-    dt = time.time() - t0
 
     if initial:
         prob['Cd_0'] = prob['Cd']
@@ -503,10 +501,6 @@ def analyze(prob, initial=True, set_cm_ref=False):
             prob['Cm_ref'] = prob['Cm']
 
         prob.run_model()
-
-    if rank == 0:
-        print(problem2string(prob, dt))
-
     return prob
 
 
@@ -523,13 +517,7 @@ def optimize(prob):
     -------
     openmdao.api.Problem
     """
-    t0 = time.time()
     prob.run_driver()
-    dt = time.time() - t0
-
-    if rank == 0:
-        print(problem2string(prob, dt))
-
     return prob
 
 
