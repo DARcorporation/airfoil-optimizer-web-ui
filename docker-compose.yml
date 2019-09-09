@@ -4,7 +4,7 @@ services:
   af-opt:
     build: .
     volumes:
-      - ./share:/af-opt/share
+      - ./share/:/af-opt/share
       - ./Runfile:/af-opt/Runfile
     environment:
       SMTP_SETTINGS: /run/secrets/smtp_settings.conf
