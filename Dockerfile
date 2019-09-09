@@ -13,7 +13,7 @@ RUN apt-get -qq update && \
     pip3 install 'cmake>=3.12'
 
 # Install requirements with pip
-RUN pip3 install --upgrade 'numpy<1.18,>=1.17' 'scipy<1.4,>=1.3' 'openmdao<2.9,>=2.8' 'tqdm<5,>=4.32'
+RUN pip3 install --upgrade 'numpy<1.18,>=1.17' 'scipy<1.4,>=1.3' 'openmdao<2.9,>=2.8' 'tqdm<5,>=4.32' matplotlib
 
 # Install XFOIL
 RUN wget -O xfoil.tar.gz https://github.com/daniel-de-vries/xfoil-python/archive/1.0.3.tar.gz && \
