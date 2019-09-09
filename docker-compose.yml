@@ -1,0 +1,16 @@
+version: '3.1'
+
+services:
+  pdot:
+    build: .
+    volumes:
+      - ./share:/af-opt/share
+      - ./Runfile:/af-opt/Runfile
+    environment:
+      SMTP_SETTINGS: /run/secrets/smtp_settings.conf
+    secrets:
+      - smtp_settings.conf
+
+secrets:
+  smtp_settings.conf:
+    file: smtp_settings.conf
