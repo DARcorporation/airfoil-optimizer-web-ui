@@ -655,6 +655,7 @@ def main(cl, n_c, n_t, b_c=8, b_t=8, b_te=8, gen=100,
 
     recorder.shutdown()
 
+    analyze(prob, False, False)
     if rank == 0:
         with open(config['repr'], 'w') as f:
             f.write(problem2string(prob, dt))
