@@ -642,7 +642,12 @@ def main(cl, n_c, n_t, b_c=8, b_t=8, b_te=8, gen=100,
     if cm_ref is not None:
         prob['Cm_ref'] = cm_ref
 
+    t0 = time.time()
     analyze(prob, set_cm_ref=(cm_ref is None))
+    dt = time.time() - t0
+    if rank == 0:
+        print('Reference airfoil:')
+        print(problem2string(prob, dt))
 
     t0 = time.time()
     optimize(prob)
