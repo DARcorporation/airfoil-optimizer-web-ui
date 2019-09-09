@@ -581,7 +581,7 @@ def plot(prob, show_legend=False, show_title=True, display=False):
     return fig
 
 
-def write(prob, filename='optimized.dat'):
+def write(prob, filename):
     """
     Write airfoil coordinates represented by the current state of the airfoil optimization problem to a file
 
@@ -589,8 +589,8 @@ def write(prob, filename='optimized.dat'):
     ----------
     prob : openmdao.api.Problem
         Airfoil optimization problem
-    filename : str, optional
-        Filename. 'optimized.dat' by default
+    filename : str
+        Filename
     """
     coords = get_coords(prob)
     fmt_str = 2 * ('{: >' + str(6 + 1) + '.' + str(6) + 'f} ') + '\n'
