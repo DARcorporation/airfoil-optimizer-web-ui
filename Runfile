@@ -1,1 +1,1 @@
-cl=1.0, n_c=3, n_t=3, b_c=8, b_t=8, gen=0, constrain_moment=False, fix_te=True, report=True
+1.0, 3, 3, 8, 8, gen=100, fix_te=True, constrain_moment=False, n_proc=16

@@ -24,6 +24,35 @@ def run(cl, n_c, n_t, b_c=8, b_t=8, b_te=8, gen=100,
         cm_ref=None, seed=None, n_proc=28,
         report=False,
         results_output_folder=None):
+    """
+    Solve the specified optimization problem and handle reporting of results.
+
+    Parameters
+    ----------
+    cl : float
+        Design lift coefficient
+    n_c, n_t : int
+        Number of CST coefficients for the chord line and thickness distribution, respectively
+    b_c, b_t, b_te : int, optional
+        Number of bits to encode each of the CST coefficients of the chord line/thickness distribution, and TE thickness
+        8 bits each by default.
+    gen : int, optional
+        Number of generations to use for the genetic algorithm. 100 by default
+    fix_te : bool, optional
+        True if the trailing edge thickness should be fixed. True by default
+    constrain_thickness, constrain_area, constrain_moment : bool, optional
+        True if the thickness, area, and/or moment coefficient should be constrained, respectively. All True by default
+    cm_ref : float, optional
+        If constrain_moment is True, this will be the maximum (absolute) moment coefficient. If None, initial Cm is used
+    seed : int, optional
+        Seed to use for the random number generator which creates an initial population for the genetic algorithm
+    n_proc : int, optional
+        Number of processors to use to evaluate functions in parallel using MPI. 28 by default
+    report : bool, optional
+        True if the results should be reported via email.
+    results_output_folder : str, optional
+        Name of the shared folder in which to store results. By default, an ISO formatted UTC timestamp will be used.
+    """
     try:
         cmd = ['mpirun', '-np', str(n_proc),
                'python3', 'problem.py',
@@ -89,6 +118,9 @@ def run(cl, n_c, n_t, b_c=8, b_t=8, b_te=8, gen=100,
 
 
 def main():
+    """
+    Run all optimization problems defined in the Runfile.
+    """
     with open('Runfile', 'r') as f:
         eval(f'run({f.readline()})')
 
