@@ -1,3 +1,4 @@
+import configparser
 import numpy as np
 import openmdao.api as om
 import os
@@ -13,6 +14,10 @@ from xfoil.model import Airfoil
 
 from cst import cst, fit
 from util import cosspace
+
+config = configparser.ConfigParser()
+config.read('filenames.cfg')
+config = config['DEFAULT']
 
 # Ensure MPI is defined
 try:
@@ -626,7 +631,7 @@ def main(cl, n_c, n_t, b_c=8, b_t=8, b_te=8, gen=100,
     seed : int, optional
         Seed to use for the random number generator which creates an initial population for the genetic algorithm
     """
-    recorder = om.SqliteRecorder('log.sql')
+    recorder = om.SqliteRecorder(config['sql_base'])
     recorder._parallel = run_parallel
     recorder._record_on_proc = True
 
@@ -646,11 +651,11 @@ def main(cl, n_c, n_t, b_c=8, b_t=8, b_te=8, gen=100,
     recorder.shutdown()
 
     if rank == 0:
-        with open('repr.txt', 'w') as f:
+        with open(config['repr'], 'w') as f:
             f.write(problem2string(prob, dt))
-        write(prob, filename='optimized.dat')
+        write(prob, filename=config['dat'])
         fig = plot(prob)
-        fig.savefig('optimized.png')
+        fig.savefig(config['png'])
 
     prob.cleanup()
     del prob
