@@ -1,18 +1,20 @@
-version: '3.1'
+version: '3.7'
 
 services:
-  af-opt:
-    build: .
+
+  optimizer:
+    build:
+      context: services/optimizer
+      dockerfile: Dockerfile
+    volumes:
+      - './results:/usr/src/af-opt/results'
+      - './services/optimizer/Runfile:/usr/src/af-opt/Runfile'
     environment:
       - SMTP_SETTINGS=/run/secrets/smtp_settings.cfg
-      - RESULTS_DIR=results
-    volumes:
-      - ./filenames.cfg:/af-opt/filenames.cfg
-      - ./Runfile:/af-opt/Runfile
-      - ./results/:/af-opt/results
+      - RESULTS_DIR=/usr/src/af-opt/results
     secrets:
       - smtp_settings.cfg
 
 secrets:
   smtp_settings.cfg:
-    file: smtp_settings.cfg
+    file: ./services/optimizer/smtp_settings.cfg

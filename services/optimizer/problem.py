@@ -211,7 +211,7 @@ def analyze_airfoil(x, y_u, y_l, cl, rey, mach=0, xf=None, pool=None, show_outpu
         cm = np.nan
         future = pool.apply_async(xfoil_worker, args=(xf, cl))
         try:
-            cd, cm = future.get(timeout=4.)
+            cd, cm = future.get(timeout=5.)
             xf.reset_bls()
         except TimeoutError:
             pass
