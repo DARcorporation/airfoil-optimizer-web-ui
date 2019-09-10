@@ -112,7 +112,7 @@ def cst2coords(a_c, a_t, t_te, n_coords=100):
     return x, y_u, y_l, y_c, t
 
 
-def xfoil_worker(xf, cl_spec, delta=None, n=0):
+def xfoil_worker(xf, cl_spec, consistency_check=True, consistency_tol=1e-4):
     """
     Try to operate the given XFoil instance at a specified lift coefficient.
 
@@ -122,30 +122,41 @@ def xfoil_worker(xf, cl_spec, delta=None, n=0):
         Instance of XFoil class with Airfoil already specified
     cl_spec : float
         Lift coefficient
-    delta : float, optional
-        Increment lift coefficient for retrying evaluation if initial evaluation fails. None by default.
-    n : int, optional
-        Number of points at which to retry if initial evaluation fails. 0 by default.
+    consistency_check : bool, optional
+        If True, airfoil will be analyzed at least twice to ensure consistent results. True by default.
+        This option will run the same airfoil at the same point twice and checks if the results match. If they don't, it
+        will be run a third time. It is expected that two out of three results will agree. The third will be considered
+        incorrect and discarded. If the first run returns NaN, the airfoil will be assumed unrealistic and it will not
+        be run a second time.
+    consistency_tol : float, optional
+        Tolerance used for the consistency check. 1e-4 by default
 
     Returns
     -------
     cd, cm : float or np.nan
         Drag and moment coefficients or nan if analysis did not complete successfully
     """
-    if n < 0:
-        raise ValueError('n needs to be larger than zero.')
+    _, cd1, cm1, _ = xf.cl(cl_spec)
+    if np.isnan(cd1) or not consistency_check:
+        return cd1, cm1
 
-    _, cd, cm, _ = xf.cl(cl_spec)
-    if np.isnan(cd) and delta is not None and delta >= 0.01 and n != 0:
-        for i in range(n):
-            cl = cl_spec + ((-1.) ** float(i)) * np.ceil(float(i + 1) / 2) * delta
-            _, cd, _, _ = xf.cl(cl)
-            if not np.isnan(cd):
-                _, cd, cm, _ = xf.cl(cl_spec)
-                return cd, cm
-    if not np.isnan(cd):
-        _, cd, cm, _ = xf.cl(cl_spec)
-    return cd, cm
+    xf.reset_bls()
+    _, cd2, cm2, _ = xf.cl(cl_spec)
+
+    e = np.abs(cd2 - cd1)
+    if e < consistency_tol:
+        return cd1, cm1
+
+    xf.reset_bls()
+    _, cd3, cm3, _ = xf.cl(cl_spec)
+
+    if np.abs(cd3 - cd1) < consistency_tol:
+        return cd1, cm1
+
+    if np.abs(cd3 - cd2) < consistency_tol:
+        return cd2, cm2
+
+    return (cd1 + cd2 + cd3) / 3., (cm1 + cm2 + cm3) / 3.
 
 
 def analyze_airfoil(x, y_u, y_l, cl, rey, mach=0, xf=None, pool=None, show_output=False):
@@ -198,7 +209,7 @@ def analyze_airfoil(x, y_u, y_l, cl, rey, mach=0, xf=None, pool=None, show_outpu
 
         cd = np.nan
         cm = np.nan
-        future = pool.apply_async(xfoil_worker, args=(xf, cl, 0.05, 1))
+        future = pool.apply_async(xfoil_worker, args=(xf, cl))
         try:
             cd, cm = future.get(timeout=4.)
             xf.reset_bls()
