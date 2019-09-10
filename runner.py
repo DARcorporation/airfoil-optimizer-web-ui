@@ -122,7 +122,9 @@ def main():
     Run all optimization problems defined in the Runfile.
     """
     with open('Runfile', 'r') as f:
-        eval(f'run({f.readline()})')
+        for line in f.readlines():
+            if line != '':
+                eval(f'run({line})')
 
 
 if __name__ == '__main__':
