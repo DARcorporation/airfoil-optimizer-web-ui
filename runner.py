@@ -87,6 +87,8 @@ def run(cl, n_c, n_t, b_c=8, b_t=8, b_te=8, gen=100,
         shutil.copy(config['sql_zip'], path)
 
         if report:
+            print('Going to send an email')
+
             msg = MIMEMultipart()
             msg['From'] = config['user']
             msg['To'] = config['receiver']
