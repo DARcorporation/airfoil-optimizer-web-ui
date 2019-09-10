@@ -30,4 +30,4 @@ COPY cst.py problem.py util.py naca0012.dat runner.py /af-opt/
 WORKDIR /af-opt
 
 #
-CMD python3 runner.py
+CMD python3 -u runner.py

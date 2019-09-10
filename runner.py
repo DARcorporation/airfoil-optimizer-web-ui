@@ -59,7 +59,7 @@ def run(cl, n_c, n_t, b_c=8, b_t=8, b_te=8, gen=100,
         os.mkdir(path)
 
         cmd = ['mpirun', '-np', str(n_proc),
-               'python3', 'problem.py',
+               'python3', '-u', 'problem.py',
                str(cl), str(n_c), str(n_t),
                str(b_c), str(b_t), str(b_te),
                str(gen), str(fix_te),
