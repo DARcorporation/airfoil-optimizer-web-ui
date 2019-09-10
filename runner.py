@@ -4,6 +4,7 @@ import os
 import shutil
 import smtplib
 import subprocess
+import sys
 import zipfile
 
 from email.mime.multipart import MIMEMultipart
@@ -65,12 +66,15 @@ def run(cl, n_c, n_t, b_c=8, b_t=8, b_te=8, gen=100,
                str(gen), str(fix_te),
                str(constrain_thickness), str(constrain_area), str(constrain_moment),
                str(cm_ref), str(seed)]
-        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        output = result.stdout.decode('utf-8')
-        print(output)
 
-        with open(config['log'], 'w', encoding='utf-8') as f:
-            f.write(output)
+        with open(config['log'], 'wb') as log:
+            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            for line in process.stdout:
+                sys.stdout.write(line.decode('utf-8'))
+                log.write(line)
+
+                if process.poll() is not None:
+                    break
 
         with zipfile.ZipFile(config['sql_zip'], 'w') as zf:
             for i in range(n_proc):
