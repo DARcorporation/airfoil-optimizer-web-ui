@@ -5,11 +5,14 @@ import shutil
 import smtplib
 import subprocess
 import sys
+import time
 import zipfile
 
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
+from threading import Thread
+from queue import Queue
 
 config = configparser.ConfigParser()
 config.read('filenames.cfg')
@@ -117,14 +120,38 @@ def run(cl, n_c, n_t, b_c=8, b_t=8, b_te=8, gen=100,
         print(e)
 
 
+def watcher(queue: Queue):
+    with open(os.environ['RUNFILE'], 'r') as f:
+        while True:
+            line = f.readline()
+            if line != '':
+                queue.put(line.rstrip('\n'))
+
+
 def main():
     """
-    Run all optimization problems defined in the Runfile.
+    Monitor a Runfile and run optimization problems as they are written to the Runfile.
     """
-    with open('Runfile', 'r') as f:
-        for line in f.readlines():
-            if line != '':
-                eval(f'run({line})')
+    print('Waiting for Runfile...')
+    while not os.path.isfile(os.environ['RUNFILE']):
+        time.sleep(0.5)
+    print('Runfile found!')
+
+    queue = Queue()
+    p_watcher = Thread(target=watcher, args=[queue])
+    p_watcher.daemon = True
+    p_watcher.start()
+
+    while True:
+        cmd = queue.get()
+        print(f'cmd: "{cmd}"')
+        if cmd.lower() == 'quit':
+            sys.exit(0)
+
+        try:
+            eval(f'run({cmd})')
+        except Exception as e:
+            print(e)
 
 
 if __name__ == '__main__':
