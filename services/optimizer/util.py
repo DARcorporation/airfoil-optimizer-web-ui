@@ -55,14 +55,14 @@ def int2base(x: int, base: int) -> str:
         x = int(x / base)
 
     if sign < 0:
-        digits.append('-')
+        digits.append("-")
 
     digits.reverse()
 
-    return ''.join(digits)
+    return "".join(digits)
 
 
-def get_random_key(length: int=4, leading_char: Optional[str]=None) -> str:
+def get_random_key(length: int = 4, leading_char: Optional[str] = None) -> str:
     """Generate a random alphanumeric string with a given number of characters.
 
     Parameters
@@ -77,13 +77,17 @@ def get_random_key(length: int=4, leading_char: Optional[str]=None) -> str:
     str
         Random alphanumeric string.
     """
-    res = ('{:0>' + str(length) + 's}').format(int2base(rng.randint(0, 36**length - 1), 36))
+    res = ("{:0>" + str(length) + "s}").format(
+        int2base(rng.randint(0, 36 ** length - 1), 36)
+    )
     if leading_char is not None:
-        return ''.join([leading_char, res])
+        return "".join([leading_char, res])
     return res
 
 
-def cosspace(start: Optional[float]=None, end: Optional[float]=None, n: Optional[int]=None) -> np.ndarray:
+def cosspace(
+    start: Optional[float] = None, end: Optional[float] = None, n: Optional[int] = None
+) -> np.ndarray:
     """Creates a cosine-spaced array of `n` points between `start` and `end`.
 
     Parameters
@@ -110,7 +114,7 @@ def cosspace(start: Optional[float]=None, end: Optional[float]=None, n: Optional
     if n is None:
         n = 100
 
-    r = (end - start) / 2.
+    r = (end - start) / 2.0
     theta = np.linspace(0, np.pi, n)
 
     return r + start - r * np.cos(theta)

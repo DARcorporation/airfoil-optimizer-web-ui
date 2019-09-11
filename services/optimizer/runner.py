@@ -15,16 +15,29 @@ from threading import Thread
 from queue import Queue
 
 config = configparser.ConfigParser()
-config.read('filenames.cfg')
-config.read(os.environ['SMTP_SETTINGS'])
-config = config['DEFAULT']
+config.read("filenames.cfg")
+config.read(os.environ["SMTP_SETTINGS"])
+config = config["DEFAULT"]
 
 
-def run(cl, n_c, n_t, b_c=8, b_t=8, b_te=8, gen=100,
-        fix_te=True,
-        constrain_thickness=True, constrain_area=True, constrain_moment=True,
-        cm_ref=None, seed=None, n_proc=28,
-        run_name=None, report=False):
+def run(
+    cl,
+    n_c,
+    n_t,
+    b_c=8,
+    b_t=8,
+    b_te=8,
+    gen=100,
+    fix_te=True,
+    constrain_thickness=True,
+    constrain_area=True,
+    constrain_moment=True,
+    cm_ref=None,
+    seed=None,
+    n_proc=28,
+    run_name=None,
+    report=False,
+):
     """
     Solve the specified optimization problem and handle reporting of results.
 
@@ -57,85 +70,110 @@ def run(cl, n_c, n_t, b_c=8, b_t=8, b_te=8, gen=100,
     try:
         if run_name is None:
             now = datetime.datetime.utcnow()
-            run_name = now.isoformat(timespec='seconds').replace('-', '').replace(':', '') + 'Z'
+            run_name = (
+                now.isoformat(timespec="seconds").replace("-", "").replace(":", "")
+                + "Z"
+            )
 
-        path = os.path.join(os.path.abspath(os.environ['RESULTS_DIR']), run_name)
+        path = os.path.join(os.path.abspath(os.environ["RESULTS_DIR"]), run_name)
         os.mkdir(path)
 
-        cmd = ['mpirun', '-np', str(n_proc),
-               'python3', '-u', 'problem.py',
-               str(cl), str(n_c), str(n_t),
-               str(b_c), str(b_t), str(b_te),
-               str(gen), str(fix_te),
-               str(constrain_thickness), str(constrain_area), str(constrain_moment),
-               str(cm_ref), str(seed)]
+        cmd = [
+            "mpirun",
+            "-np",
+            str(n_proc),
+            "python3",
+            "-u",
+            "problem.py",
+            str(cl),
+            str(n_c),
+            str(n_t),
+            str(b_c),
+            str(b_t),
+            str(b_te),
+            str(gen),
+            str(fix_te),
+            str(constrain_thickness),
+            str(constrain_area),
+            str(constrain_moment),
+            str(cm_ref),
+            str(seed),
+        ]
 
-        with open(config['log'], 'wb') as log:
-            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        with open(config["log"], "wb") as log:
+            process = subprocess.Popen(
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+            )
             for line in process.stdout:
-                sys.stdout.write(line.decode('utf-8'))
+                sys.stdout.write(line.decode("utf-8"))
                 log.write(line)
 
                 if process.poll() is not None:
                     break
 
-        with zipfile.ZipFile(config['sql_zip'], 'w') as zf:
+        with zipfile.ZipFile(config["sql_zip"], "w") as zf:
             for i in range(n_proc):
                 zf.write(f'{config["sql_base"]}_{i}')
 
-        shutil.copy(config['repr'], path)
-        shutil.copy(config['png'], path)
-        shutil.copy(config['dat'], path)
-        shutil.copy(config['log'], path)
-        shutil.copy(config['sql_zip'], path)
+        shutil.copy(config["repr"], path)
+        shutil.copy(config["png"], path)
+        shutil.copy(config["dat"], path)
+        shutil.copy(config["log"], path)
+        shutil.copy(config["sql_zip"], path)
 
         if report:
-            print('Going to send an email')
+            print("Going to send an email")
 
             msg = MIMEMultipart()
-            msg['From'] = config['user']
-            msg['To'] = config['receiver']
-            msg['Subject'] = 'Airfoil Optimization Complete!'
-            with open(config['repr'], 'r') as f:
-                msg.attach(MIMEText(f.read(), 'plain'), )
-            with open(config['png'], 'rb') as fp:
-                attachment = MIMEImage(fp.read(), _subtype='png')
-                attachment.add_header('Content-Disposition', 'attachment', filename=config['png'])
+            msg["From"] = config["user"]
+            msg["To"] = config["receiver"]
+            msg["Subject"] = "Airfoil Optimization Complete!"
+            with open(config["repr"], "r") as f:
+                msg.attach(MIMEText(f.read(), "plain"))
+            with open(config["png"], "rb") as fp:
+                attachment = MIMEImage(fp.read(), _subtype="png")
+                attachment.add_header(
+                    "Content-Disposition", "attachment", filename=config["png"]
+                )
                 msg.attach(attachment)
-            with open(config['dat'], 'r') as f:
+            with open(config["dat"], "r") as f:
                 attachment = MIMEText(f.read())
-                attachment.add_header('Content-Disposition', 'attachment', filename=config['dat'])
+                attachment.add_header(
+                    "Content-Disposition", "attachment", filename=config["dat"]
+                )
                 msg.attach(attachment)
-            with open(config['log'], 'r', encoding='utf-8') as f:
+            with open(config["log"], "r", encoding="utf-8") as f:
                 attachment = MIMEText(f.read())
-                attachment.add_header('Content-Disposition', 'attachment', filename=config['log'])
+                attachment.add_header(
+                    "Content-Disposition", "attachment", filename=config["log"]
+                )
                 msg.attach(attachment)
 
-            with smtplib.SMTP_SSL(config['host'], int(config['port'])) as server:
+            with smtplib.SMTP_SSL(config["host"], int(config["port"])) as server:
                 server.ehlo()
-                server.login(config['user'], config['password'])
-                server.sendmail(config['user'], config['receiver'], msg.as_string())
-                print('Email sent')
+                server.login(config["user"], config["password"])
+                server.sendmail(config["user"], config["receiver"], msg.as_string())
+                print("Email sent")
     except Exception as e:
         print(e)
 
 
 def watcher(queue: Queue):
-    with open(os.environ['RUNFILE'], 'r') as f:
+    with open(os.environ["RUNFILE"], "r") as f:
         while True:
             line = f.readline()
-            if line != '':
-                queue.put(line.rstrip('\n'))
+            if line != "":
+                queue.put(line.rstrip("\n"))
 
 
 def main():
     """
     Monitor a Runfile and run optimization problems as they are written to the Runfile.
     """
-    print('Waiting for Runfile...')
-    while not os.path.isfile(os.environ['RUNFILE']):
+    print("Waiting for Runfile...")
+    while not os.path.isfile(os.environ["RUNFILE"]):
         time.sleep(0.5)
-    print('Runfile found!')
+    print("Runfile found!")
 
     queue = Queue()
     p_watcher = Thread(target=watcher, args=[queue])
@@ -145,14 +183,14 @@ def main():
     while True:
         cmd = queue.get()
         print(f'cmd: "{cmd}"')
-        if cmd.lower() == 'quit':
+        if cmd.lower() == "quit":
             sys.exit(0)
 
         try:
-            eval(f'run({cmd})')
+            eval(f"run({cmd})")
         except Exception as e:
             print(e)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
