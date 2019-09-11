@@ -1,5 +1,3 @@
-from sqlalchemy.sql import func
-
 from project import db
 
 
