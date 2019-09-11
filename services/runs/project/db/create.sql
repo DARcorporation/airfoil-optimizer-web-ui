@@ -1,0 +1,3 @@
+CREATE DATABASE runs_prod;
+CREATE DATABASE runs_dev;
+CREATE DATABASE runs_test;
