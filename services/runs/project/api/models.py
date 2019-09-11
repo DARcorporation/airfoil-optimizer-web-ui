@@ -4,7 +4,7 @@ from project import db
 
 
 class Run(db.Model):
-    __tablename__ = 'runs'
+    __tablename__ = "runs"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     run_name = db.Column(db.String(128), nullable=True)
     cl = db.Column(db.Float(), nullable=False)
@@ -24,12 +24,25 @@ class Run(db.Model):
     report = db.Column(db.Boolean(), nullable=False, default=False)
     status = db.Column(db.Integer(), nullable=False, default=0)
 
-    def __init__(self,
-                 cl, n_c, n_t, b_c=8, b_t=8, b_te=8, gen=100,
-                 fix_te=True,
-                 constrain_thickness=True, constrain_area=True, constrain_moment=False,
-                 cm_ref=None, seed=None, n_proc=16,
-                 run_name=None, report=False):
+    def __init__(
+        self,
+        cl,
+        n_c,
+        n_t,
+        b_c=8,
+        b_t=8,
+        b_te=8,
+        gen=100,
+        fix_te=True,
+        constrain_thickness=True,
+        constrain_area=True,
+        constrain_moment=False,
+        cm_ref=None,
+        seed=None,
+        n_proc=16,
+        run_name=None,
+        report=False,
+    ):
         self.run_name = run_name
         self.cl = cl
         self.n_c = n_c
