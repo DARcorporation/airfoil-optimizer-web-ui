@@ -1,0 +1,9 @@
+[tool.black]
+line-length = 88
+target-version = ['py37']
+exclude = '''
+
+(
+    .\services\optimizer\genetic_algorithm_driver.py
+)
+'''

@@ -1,3 +1,4 @@
+# fmt: off
 """
 Driver for a simple genetic algorithm.
 
@@ -838,3 +839,4 @@ class GeneticAlgorithm(object):
         x = np.round((x - vlb) / interval).astype(np.int)
         byte_str = [("0" * b + bin(i)[2:])[-b:] for i, b in zip(x, bits)]
         return np.array([int(c) for s in byte_str for c in s])
+# fmt: on

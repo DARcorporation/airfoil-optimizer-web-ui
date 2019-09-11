@@ -5,8 +5,14 @@ from scipy.special import binom
 from typing import Union, List, Tuple, Optional
 
 
-def cst(x: Union[float, List[float], np.ndarray], a: Union[List[float], np.ndarray],
-        c: float=1., delta: Tuple[float, float]=(0., 0.), n1: float=0.5, n2: float=1.) -> np.ndarray:
+def cst(
+    x: Union[float, List[float], np.ndarray],
+    a: Union[List[float], np.ndarray],
+    c: float = 1.0,
+    delta: Tuple[float, float] = (0.0, 0.0),
+    n1: float = 0.5,
+    n2: float = 1.0,
+) -> np.ndarray:
     """Compute coordinates of a CST-decomposed curve.
 
     This function uses the Class-Shape Transformation (CST) method to compute the y-coordinates as a function of a given
@@ -43,23 +49,32 @@ def cst(x: Union[float, List[float], np.ndarray], a: Union[List[float], np.ndarr
     if type(x) == list:
         x = np.array(x)
 
-    psi = x / c                                                                 # Non-dimensional x-coordinates
-    cls = (psi ** n1) * ((1. - psi) ** n2)                                      # Class function
-    n   = len(a) - 1                                                            # Bernstein polynomial degree
+    psi = x / c  # Non-dimensional x-coordinates
+    cls = (psi ** n1) * ((1.0 - psi) ** n2)  # Class function
+    n = len(a) - 1  # Bernstein polynomial degree
 
     shape = 0
     for r in range(len(a)):
-        s = binom(n, r) * (psi ** r) * (1. - psi) ** (n - r)                    # Bernstein polynomial term
-        shape += a[r] * s                                                       # Shape function contribution
+        s = (
+            binom(n, r) * (psi ** r) * (1.0 - psi) ** (n - r)
+        )  # Bernstein polynomial term
+        shape += a[r] * s  # Shape function contribution
 
     # Compute coordinates
-    eta = cls * shape + ((1. - psi) * delta[0] + psi * delta[1]) / c            # Non-dimensional y-coordinates
-    return c * eta                                                              # Return dimensional y-coordinates
+    eta = (
+        cls * shape + ((1.0 - psi) * delta[0] + psi * delta[1]) / c
+    )  # Non-dimensional y-coordinates
+    return c * eta  # Return dimensional y-coordinates
 
 
-def fit(x: Union[List[float], np.ndarray], y: Union[List[float], np.ndarray], n: int,
-        delta: Optional[Tuple[float, float]]=None, n1: float=0.5, n2: float=1.0
-        )-> Tuple[np.ndarray, Tuple[float, float]]:
+def fit(
+    x: Union[List[float], np.ndarray],
+    y: Union[List[float], np.ndarray],
+    n: int,
+    delta: Optional[Tuple[float, float]] = None,
+    n1: float = 0.5,
+    n2: float = 1.0,
+) -> Tuple[np.ndarray, Tuple[float, float]]:
     """Fit a set of coordinates to a CST representation.
 
     Parameters
