@@ -1,4 +1,5 @@
 # Airfoil Optimizer
+[![Build Status](https://travis-ci.com/daniel-de-vries/airfoil-optimizer.svg?branch=master)](https://travis-ci.com/daniel-de-vries/airfoil-optimizer)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 Tool to optimize an airfoil for minimum drag at a given design lift coefficient using a genetic algorithm.
