@@ -2,28 +2,28 @@ version: '3.7'
 
 services:
 
-  optimizer:
-    build:
-      context: services/optimizer
-      dockerfile: Dockerfile
-    volumes:
-      - './results:/usr/src/af-opt/results'
-      - 'runfile_folder:/usr/src/af-opt/shared'
-    environment:
-      - SMTP_SETTINGS=/run/secrets/smtp_settings.cfg
-      - RESULTS_DIR=/usr/src/af-opt/results
-      - RUNFILE=shared/Runfile
-    secrets:
-      - smtp_settings.cfg
-
-  nudger:
-    build:
-      context: services/nudger
-      dockerfile: Dockerfile
-    volumes:
-      - 'runfile_folder:/root/shared'
-    environment:
-      - RUNFILE=shared/Runfile
+#  optimizer:
+#    build:
+#      context: services/optimizer
+#      dockerfile: Dockerfile
+#    volumes:
+#      - './results:/usr/src/af-opt/results'
+#      - 'runfile_folder:/usr/src/af-opt/shared'
+#    environment:
+#      - SMTP_SETTINGS=/run/secrets/smtp_settings.cfg
+#      - RESULTS_DIR=/usr/src/af-opt/results
+#      - RUNFILE=shared/Runfile
+#    secrets:
+#      - smtp_settings.cfg
+#
+#  nudger:
+#    build:
+#      context: services/nudger
+#      dockerfile: Dockerfile
+#    volumes:
+#      - 'runfile_folder:/root/shared'
+#    environment:
+#      - RUNFILE=shared/Runfile
 
   runs:
     build:
