@@ -33,7 +33,7 @@ services:
       #      - 'runfile_folder:/usr/src/app/shared'
       - './services/runs:/usr/src/app'
     ports:
-      - 5001:5000
+      - 5000
     environment:
       #      - RUNFILE=shared/Runfile
       - FLASK_ENV=development
@@ -48,10 +48,20 @@ services:
       context: ./services/runs/project/db
       dockerfile: Dockerfile
     ports:
-      - 5435:5432
+      - 5432
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
+
+  nginx:
+    build:
+      context: ./services/nginx
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - 80:80
+    depends_on:
+      - runs
 
 secrets:
   smtp_settings.cfg:
