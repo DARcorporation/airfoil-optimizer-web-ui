@@ -7,11 +7,11 @@ services:
       context: services/optimizer
       dockerfile: Dockerfile
     volumes:
-      - './results:/usr/src/af-opt/results'
-      - 'runfile_folder:/usr/src/af-opt/shared'
+      - './results:/usr/src/app/results'
+      - 'runfile_folder:/usr/src/app/shared'
     environment:
       - SMTP_SETTINGS=/run/secrets/smtp_settings.cfg
-      - RESULTS_DIR=/usr/src/af-opt/results
+      - RESULTS_DIR=/usr/src/app/results
       - RUNFILE=shared/Runfile
     secrets:
       - smtp_settings.cfg
