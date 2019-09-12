@@ -1,0 +1,90 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`AddRun renders a snapshot properly 1`] = `
+<form
+  onSubmit={[Function]}
+>
+  <div
+    className="field"
+  >
+    <input
+      className="input is-large"
+      name="cl"
+      placeholder="Enter the design lift coefficient"
+      required={true}
+      type="number"
+    />
+  </div>
+  <div
+    className="field"
+  >
+    <input
+      className="input is-large"
+      name="n_c"
+      placeholder="Enter the number of CST coefficients for the chord line"
+      required={true}
+      type="number"
+    />
+  </div>
+  <div
+    className="field"
+  >
+    <input
+      className="input is-large"
+      name="n_t"
+      placeholder="Enter the number of CST coefficients for the thickness distribution"
+      required={true}
+      type="number"
+    />
+  </div>
+  <div
+    className="field"
+  >
+    <input
+      className="input is-large"
+      name="b_c"
+      placeholder="Enter the number of bits per chord line CST coefficient"
+      required={true}
+      type="number"
+    />
+  </div>
+  <div
+    className="field"
+  >
+    <input
+      className="input is-large"
+      name="b_t"
+      placeholder="Enter the number of bits per thickness CST coefficient"
+      required={true}
+      type="number"
+    />
+  </div>
+  <div
+    className="field"
+  >
+    <input
+      className="input is-large"
+      name="b_te"
+      placeholder="Enter the number of bits for the TE thickness"
+      required={true}
+      type="number"
+    />
+  </div>
+  <div
+    className="field"
+  >
+    <input
+      className="input is-large"
+      name="gen"
+      placeholder="Enter the number of generations for the genetic algorithm"
+      required={true}
+      type="number"
+    />
+  </div>
+  <input
+    className="button is-primary is-large is-fullwidth"
+    type="submit"
+    value="Submit"
+  />
+</form>
+`;
