@@ -10,5 +10,6 @@ done;
 
 docker-compose exec runs python manage.py test
 docker-compose exec runs flake8 project
+docker-compose exec -e CI=true client npm test
 
 docker-compose down
