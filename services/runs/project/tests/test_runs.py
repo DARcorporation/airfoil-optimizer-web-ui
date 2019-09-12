@@ -84,7 +84,7 @@ class TestRunsService(BaseTestCase):
             self.assertEqual(3, data["data"]["n_t"])
             self.assertIn("success", data["status"])
 
-    def test_single_user_no_id(self):
+    def test_single_run_no_id(self):
         """Ensure error is thrown is an id is not provided."""
         with self.client:
             response = self.client.get(f"/runs/blah")
@@ -93,7 +93,7 @@ class TestRunsService(BaseTestCase):
             self.assertIn("Run does not exist", data["message"])
             self.assertIn("fail", data["status"])
 
-    def test_single_user_incorrect_id(self):
+    def test_single_run_incorrect_id(self):
         """Ensure error is thrown if the id does not exist."""
         with self.client:
             response = self.client.get(f"/runs/999")
