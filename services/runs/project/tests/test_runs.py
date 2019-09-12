@@ -124,6 +124,80 @@ class TestRunsService(BaseTestCase):
 
             self.assertIn("success", data["status"])
 
+    def test_accept_run(self):
+        """Ensure accept run behaves correctly."""
+        add_run(1.0, 3, 3)
+        with self.client:
+            response = self.client.get("/runs/accept")
+            data = json.loads(response.data.decode())
+            self.assertEqual(response.status_code, 200)
+
+            self.assertEqual(1.0, data["data"]["cl"])
+            self.assertEqual(3, data["data"]["n_c"])
+            self.assertEqual(3, data["data"]["n_t"])
+            self.assertEqual(1, data["data"]["status"])
+
+            self.assertIn("success", data["status"])
+
+    def test_accept_run_no_runs_in_queue(self):
+        """
+        Ensure accept run haves correctly if there are no runs in the queue.
+        """
+        with self.client:
+            response = self.client.get("/runs/accept")
+            self.assertEqual(response.status_code, 204)
+            self.assertFalse(response.data)
+
+    def test_complete_run(self):
+        """Ensure complete run behaves correctly."""
+        run = add_run(1.0, 3, 3)
+        run.status = 1
+        db.session.commit()
+        with self.client:
+            response = self.client.post(
+                "/runs/complete",
+                data=json.dumps({"id": 1, "success": True}),
+                content_type="application/json",
+            )
+            data = json.loads(response.data.decode())
+            self.assertEqual(response.status_code, 200)
+            self.assertIn("Run marked as complete", data["message"])
+            self.assertIn("success", data["status"])
+
+    def test_complete_run_failed(self):
+        """Ensure complete run failed behaves correctly."""
+        run = add_run(1.0, 3, 3)
+        run.status = 1
+        db.session.commit()
+        with self.client:
+            response = self.client.post(
+                "/runs/complete",
+                data=json.dumps({"id": 1, "success": False}),
+                content_type="application/json",
+            )
+            data = json.loads(response.data.decode())
+            self.assertEqual(response.status_code, 200)
+            self.assertIn("Run marked as failed", data["message"])
+            self.assertIn("success", data["status"])
+
+    def test_complete_run_not_accepted(self):
+        """
+        Ensure error is thrown is a run which has not been accepted is completed.
+        """
+        add_run(1.0, 3, 3)
+        with self.client:
+            response = self.client.post(
+                "/runs/complete",
+                data=json.dumps({"id": 1, "success": True}),
+                content_type="application/json",
+            )
+            data = json.loads(response.data.decode())
+            self.assertEqual(response.status_code, 400)
+            self.assertIn(
+                "Cannot complete run which has not been accepted", data["message"]
+            )
+            self.assertIn("fail", data["status"])
+
 
 if __name__ == "__main__":
     unittest.main()

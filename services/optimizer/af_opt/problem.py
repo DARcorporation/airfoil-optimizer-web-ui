@@ -796,7 +796,7 @@ if __name__ == "__main__":
             sql_file=sys.argv[14],
             repr_file=sys.argv[15],
             dat_file=sys.argv[16],
-            png_file=sys.argv[17]
+            png_file=sys.argv[17],
         )
     else:
         main(1.0, 3, 3, gen=9)

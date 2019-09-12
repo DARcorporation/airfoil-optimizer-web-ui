@@ -1,6 +1,7 @@
 import configparser
 import datetime
 import os
+import requests
 import smtplib
 import subprocess
 import sys
@@ -10,8 +11,6 @@ import zipfile
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
-from threading import Thread
-from queue import Queue
 
 config = configparser.ConfigParser()
 config.read(os.environ["SMTP_SETTINGS"])
@@ -81,7 +80,7 @@ def run(
         dat_file = os.path.join(path, "optimized.dat")
         png_file = os.path.join(path, "optimized.png")
         log_file = os.path.join(path, "log.txt")
-        sql_zip = sql_base + '.zip'
+        sql_zip = sql_base + ".zip"
 
         cmd = [
             "mpirun",
@@ -89,7 +88,7 @@ def run(
             str(n_proc),
             "python3",
             "-u",
-            "-m"
+            "-m",
             "af_opt.problem",
             str(cl),
             str(n_c),
@@ -107,7 +106,7 @@ def run(
             str(sql_base),
             str(repr_file),
             str(dat_file),
-            str(png_file)
+            str(png_file),
         ]
 
         with open(log_file, "wb") as log:
@@ -123,7 +122,7 @@ def run(
 
         with zipfile.ZipFile(sql_zip, "w") as zf:
             for i in range(n_proc):
-                zf.write(f'{sql_base}_{i}')
+                zf.write(f"{sql_base}_{i}")
 
         if report:
             print("Going to send an email")
@@ -137,19 +136,25 @@ def run(
             with open(png_file, "rb") as fp:
                 attachment = MIMEImage(fp.read(), _subtype="png")
                 attachment.add_header(
-                    "Content-Disposition", "attachment", filename=os.path.basename(png_file)
+                    "Content-Disposition",
+                    "attachment",
+                    filename=os.path.basename(png_file),
                 )
                 msg.attach(attachment)
             with open(dat_file, "r") as f:
                 attachment = MIMEText(f.read())
                 attachment.add_header(
-                    "Content-Disposition", "attachment", filename=os.path.basename(dat_file)
+                    "Content-Disposition",
+                    "attachment",
+                    filename=os.path.basename(dat_file),
                 )
                 msg.attach(attachment)
             with open(log_file, "r", encoding="utf-8") as f:
                 attachment = MIMEText(f.read())
                 attachment.add_header(
-                    "Content-Disposition", "attachment", filename=os.path.basename(log_file)
+                    "Content-Disposition",
+                    "attachment",
+                    filename=os.path.basename(log_file),
                 )
                 msg.attach(attachment)
 
@@ -162,38 +167,31 @@ def run(
         print(e)
 
 
-def watcher(queue: Queue):
-    with open(os.environ["RUNFILE"], "r") as f:
-        while True:
-            line = f.readline()
-            if line != "":
-                queue.put(line.rstrip("\n"))
-
-
 def main():
     """
-    Monitor a Runfile and run optimization problems as they are written to the Runfile.
+    Poll runs service for new run cases and run them.
     """
-    print("Waiting for Runfile...")
-    while not os.path.isfile(os.environ["RUNFILE"]):
-        time.sleep(0.5)
-    print("Runfile found!")
-
-    queue = Queue()
-    p_watcher = Thread(target=watcher, args=[queue])
-    p_watcher.daemon = True
-    p_watcher.start()
+    host = os.environ["RUNS_SERVICE_URL"]
 
     while True:
-        cmd = queue.get()
-        print(f'cmd: "{cmd}"')
-        if cmd.lower() == "quit":
-            sys.exit(0)
+        r = requests.get(f"{host}/runs/accept")
+        if r.status_code == 204:
+            time.sleep(1)
+            continue
+
+        response_object = r.json()
+        id = response_object["data"]["id"]
+
+        kwargs = dict(response_object["data"])
+        del kwargs["id"]
+        del kwargs["status"]
 
         try:
-            eval(f"run({cmd})")
-        except Exception as e:
-            print(e)
+            run(**kwargs)
+            requests.post(f"{host}/runs/complete", json={"id": id, "success": True})
+        except TypeError:
+            print("Invalid run case")
+            requests.post(f"{host}/runs/complete", json={"id": id, "success": False})
 
 
 if __name__ == "__main__":

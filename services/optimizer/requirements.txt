@@ -5,3 +5,4 @@ openmdao<2.9,>=2.8
 tqdm<5,>=4.32
 py3DNS<3.3,>=3.2
 validate_email<1.4,>=1.3
+requests<2.23,>=2.22
