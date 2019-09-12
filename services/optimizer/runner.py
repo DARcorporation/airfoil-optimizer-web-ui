@@ -1,7 +1,6 @@
 import configparser
 import datetime
 import os
-import shutil
 import smtplib
 import subprocess
 import sys
@@ -15,7 +14,6 @@ from threading import Thread
 from queue import Queue
 
 config = configparser.ConfigParser()
-config.read("filenames.cfg")
 config.read(os.environ["SMTP_SETTINGS"])
 config = config["DEFAULT"]
 
@@ -76,7 +74,14 @@ def run(
             )
 
         path = os.path.join(os.path.abspath(os.environ["RESULTS_DIR"]), run_name)
-        os.mkdir(path)
+        os.makedirs(path)
+
+        sql_base = os.path.join(path, "log.sql")
+        repr_file = os.path.join(path, "repr.txt")
+        dat_file = os.path.join(path, "optimized.dat")
+        png_file = os.path.join(path, "optimized.png")
+        log_file = os.path.join(path, "log.txt")
+        sql_zip = sql_base + '.zip'
 
         cmd = [
             "mpirun",
@@ -84,7 +89,8 @@ def run(
             str(n_proc),
             "python3",
             "-u",
-            "problem.py",
+            "-m"
+            "af_opt.problem",
             str(cl),
             str(n_c),
             str(n_t),
@@ -98,9 +104,13 @@ def run(
             str(constrain_moment),
             str(cm_ref),
             str(seed),
+            str(sql_base),
+            str(repr_file),
+            str(dat_file),
+            str(png_file)
         ]
 
-        with open(config["log"], "wb") as log:
+        with open(log_file, "wb") as log:
             process = subprocess.Popen(
                 cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
             )
@@ -111,15 +121,9 @@ def run(
                 if process.poll() is not None:
                     break
 
-        with zipfile.ZipFile(config["sql_zip"], "w") as zf:
+        with zipfile.ZipFile(sql_zip, "w") as zf:
             for i in range(n_proc):
-                zf.write(f'{config["sql_base"]}_{i}')
-
-        shutil.copy(config["repr"], path)
-        shutil.copy(config["png"], path)
-        shutil.copy(config["dat"], path)
-        shutil.copy(config["log"], path)
-        shutil.copy(config["sql_zip"], path)
+                zf.write(f'{sql_base}_{i}')
 
         if report:
             print("Going to send an email")
@@ -128,24 +132,24 @@ def run(
             msg["From"] = config["user"]
             msg["To"] = config["receiver"]
             msg["Subject"] = "Airfoil Optimization Complete!"
-            with open(config["repr"], "r") as f:
+            with open(repr_file, "r") as f:
                 msg.attach(MIMEText(f.read(), "plain"))
-            with open(config["png"], "rb") as fp:
+            with open(png_file, "rb") as fp:
                 attachment = MIMEImage(fp.read(), _subtype="png")
                 attachment.add_header(
-                    "Content-Disposition", "attachment", filename=config["png"]
+                    "Content-Disposition", "attachment", filename=os.path.basename(png_file)
                 )
                 msg.attach(attachment)
-            with open(config["dat"], "r") as f:
+            with open(dat_file, "r") as f:
                 attachment = MIMEText(f.read())
                 attachment.add_header(
-                    "Content-Disposition", "attachment", filename=config["dat"]
+                    "Content-Disposition", "attachment", filename=os.path.basename(dat_file)
                 )
                 msg.attach(attachment)
-            with open(config["log"], "r", encoding="utf-8") as f:
+            with open(log_file, "r", encoding="utf-8") as f:
                 attachment = MIMEText(f.read())
                 attachment.add_header(
-                    "Content-Disposition", "attachment", filename=config["log"]
+                    "Content-Disposition", "attachment", filename=os.path.basename(log_file)
                 )
                 msg.attach(attachment)
 

@@ -1,4 +1,3 @@
-import configparser
 import numpy as np
 import openmdao.api as om
 import os
@@ -12,12 +11,8 @@ from random import SystemRandom
 from xfoil import XFoil
 from xfoil.model import Airfoil
 
-from cst import cst, fit
-from util import cosspace
-
-config = configparser.ConfigParser()
-config.read("filenames.cfg")
-config = config["DEFAULT"]
+from .cst import cst, fit
+from .util import cosspace
 
 # Ensure MPI is defined
 try:
@@ -37,7 +32,8 @@ else:
 array_formatter = {"float_kind": "{: 7.4f}".format}
 
 # Reference airfoil coordinates
-coords_file = "naca0012.dat"
+file_path = os.path.abspath(os.path.dirname(__file__))
+coords_file = os.path.join(file_path, "naca0012.dat")
 coords_ref = np.loadtxt(coords_file, skiprows=1)
 
 # Reference airfoil coordinates split between upper and lower surfaces
@@ -698,6 +694,10 @@ def main(
     constrain_moment=True,
     cm_ref=None,
     seed=None,
+    sql_file="log.sql",
+    repr_file="repr.txt",
+    dat_file="optimized.dat",
+    png_file="optimized.png",
 ):
     """
     Create, analyze, optimize airfoil, and write optimized coordinates to a file. Then clean the problem up and exit.
@@ -721,8 +721,10 @@ def main(
         If constrain_moment is True, this will be the maximum (absolute) moment coefficient. If None, initial Cm is used
     seed : int, optional
         Seed to use for the random number generator which creates an initial population for the genetic algorithm
+    sql_file, repr_file, dat_file, png_file : str, optional
+        Paths where the SQL log, final representation, optimized airfoil coordinates, and output image should be saved.
     """
-    recorder = om.SqliteRecorder(config["sql_base"])
+    recorder = om.SqliteRecorder(sql_file)
     recorder._parallel = run_parallel
     recorder._record_on_proc = True
 
@@ -763,11 +765,11 @@ def main(
         print("Optimized airfoil:")
         print(s)
 
-        with open(config["repr"], "w") as f:
+        with open(repr_file, "w") as f:
             f.write(s)
-        write(prob, filename=config["dat"])
+        write(prob, filename=dat_file)
         fig = plot(prob)
-        fig.savefig(config["png"])
+        fig.savefig(png_file)
 
     prob.cleanup()
     del prob
@@ -776,7 +778,7 @@ def main(
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 14:
+    if len(sys.argv) == 18:
         main(
             cl=float(sys.argv[1]),
             n_c=int(sys.argv[2]),
@@ -791,6 +793,10 @@ if __name__ == "__main__":
             constrain_moment=(sys.argv[11] == "True"),
             cm_ref=None if sys.argv[12] == "None" else float(sys.argv[12]),
             seed=None if sys.argv[13] == "None" else int(sys.argv[13]),
+            sql_file=sys.argv[14],
+            repr_file=sys.argv[15],
+            dat_file=sys.argv[16],
+            png_file=sys.argv[17]
         )
     else:
         main(1.0, 3, 3, gen=9)

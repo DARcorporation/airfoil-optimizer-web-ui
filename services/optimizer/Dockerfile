@@ -28,11 +28,12 @@ RUN wget -O xfoil.tar.gz https://github.com/daniel-de-vries/xfoil-python/archive
 COPY ./genetic_algorithm_driver.py /usr/local/lib/python3.6/dist-packages/openmdao/drivers/
 
 # Add source and switch working directory to it
-COPY . /usr/src/af-opt
-WORKDIR /usr/src/af-opt
+COPY . /usr/src/app
+WORKDIR /usr/src/app
 
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
+ENV PYTHONPATH=$PYTHONPATH:/usr/src/app/af_opt
 
 # run server
 CMD python3 -u runner.py
