@@ -14,5 +14,6 @@ before_install:
 
 before_script:
   - chmod +x ./run_tests.sh
+  - export REACT_APP_RUNS_SERVICE_URL=http://127.0.0.1
 
 script: ./run_tests.sh

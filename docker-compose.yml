@@ -62,6 +62,22 @@ services:
       - 80:80
     depends_on:
       - runs
+      - client
+
+  client:
+    build:
+      context: ./services/client
+      dockerfile: Dockerfile
+    volumes:
+      - './services/client:/usr/src/app'
+      - '/usr/src/app/node_modules'
+    ports:
+      - 3007:3000
+    environment:
+      - NODE_ENV=development
+      - REACT_APP_RUNS_SERVICE_URL=http://localhost
+    depends_on:
+      - runs
 
 secrets:
   smtp_settings.cfg:
