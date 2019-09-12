@@ -30,12 +30,10 @@ services:
       context: ./services/runs
       dockerfile: Dockerfile
     volumes:
-      #      - 'runfile_folder:/usr/src/app/shared'
       - './services/runs:/usr/src/app'
     ports:
       - 5000
     environment:
-      #      - RUNFILE=shared/Runfile
       - FLASK_ENV=development
       - APP_SETTINGS=project.config.DevelopmentConfig
       - DATABASE_URL=postgres://postgres:postgres@runs-db:5432/runs_dev
