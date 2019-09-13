@@ -3,13 +3,29 @@ import React from 'react';
 const RunsList = (props) => {
   return (
     <div>
+      <h2 className="title is-2">Submitted Runs:</h2>
       {
         props.runs.map((run) => {
           return (
             <h4
               key={run.id}
               className="box title is-4"
-            >{run.cl}, {run.n_c}, {run.n_t}, {run.b_c}, {run.b_t}, {run.b_te}, {run.gen}
+              style={
+                {
+                  backgroundColor: run.status === 0 ? 'lightblue' : (
+                    run.status === 1 ? 'orange' : (
+                      run.status === 2 ? 'lightgreen' : 'red'
+                    )
+                  )
+                }
+              }
+            >{
+              run.status === 0 ? "In Queue" : (
+                run.status === 1 ? "Running..." : (
+                  run.status === 2 ? "Completed" : "Failed"
+                )
+              )
+            }
             </h4>
           )
         })
