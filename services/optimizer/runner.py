@@ -6,7 +6,6 @@ import smtplib
 import subprocess
 import sys
 import time
-import zipfile
 
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -75,12 +74,10 @@ def run(
         path = os.path.join(os.path.abspath(os.environ["RESULTS_DIR"]), run_name)
         os.makedirs(path)
 
-        sql_base = os.path.join(path, "log.sql")
         repr_file = os.path.join(path, "repr.txt")
         dat_file = os.path.join(path, "optimized.dat")
         png_file = os.path.join(path, "optimized.png")
         log_file = os.path.join(path, "log.txt")
-        sql_zip = sql_base + ".zip"
 
         cmd = [
             "mpirun",
@@ -103,7 +100,6 @@ def run(
             str(constrain_moment),
             str(cm_ref),
             str(seed),
-            str(sql_base),
             str(repr_file),
             str(dat_file),
             str(png_file),
@@ -119,10 +115,6 @@ def run(
 
                 if process.poll() is not None:
                     break
-
-        with zipfile.ZipFile(sql_zip, "w") as zf:
-            for i in range(n_proc):
-                zf.write(f"{sql_base}_{i}")
 
         if report:
             print("Going to send an email")

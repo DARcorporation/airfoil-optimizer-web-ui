@@ -24,9 +24,11 @@ except ImportError:
 if not MPI:
     run_parallel = False
     rank = 0
+    n_proc = 1
 else:
     run_parallel = True
     rank = MPI.COMM_WORLD.rank
+    n_proc = MPI.COMM_WORLD.size
 
 # Numpy string formatters
 array_formatter = {"float_kind": "{: 7.4f}".format}
@@ -459,45 +461,7 @@ class AfOptModel(om.Group):
         return s
 
 
-def get_problem(
-    n_c,
-    n_t,
-    b_c=8,
-    b_t=8,
-    b_te=8,
-    gen=100,
-    fix_te=True,
-    constrain_thickness=True,
-    constrain_area=True,
-    constrain_moment=True,
-    seed=None,
-    recorder=None,
-):
-    """
-    Construct an OpenMDAO Problem which minimizes the drag coefficient of an airfoil for a given lift coefficient.
-
-    Parameters
-    ----------
-    n_c, n_t : int
-        Number of CST coefficients for the chord line and thickness distribution, respectively
-    b_c, b_t, b_te : int, optional
-        Number of bits to encode each of the CST coefficients of the chord line/thickness distribution, and TE thickness
-        8 bits each by default.
-    gen : int, optional
-        Number of generations to use for the genetic algorithm. 100 by default
-    fix_te : bool, optional
-        True if the trailing edge thickness should be fixed. True by default
-    constrain_thickness, constrain_area, constrain_moment : bool, optional
-        True if the thickness, area, and/or moment coefficient should be constrained, respectively. All True by default
-    seed : int, optional
-        Seed to use for the random number generator which creates an initial population for the genetic algorithm
-    recorder : openmdao.api.Recorder, optional
-        Recorder to attach to the driver
-
-    Returns
-    -------
-    openmdao.api.Problem
-    """
+def get_ga_driver(b_c, b_t, b_te=None, gen=100, seed=None):
     # Set a starting seed for the random number generated if given
     if rank == 0:
         if seed is None:
@@ -506,30 +470,24 @@ def get_problem(
         os.environ["SimpleGADriver_seed"] = str(seed)
 
     bits = {"a_c": b_c, "a_t": b_t}
-    if not fix_te:
+    if b_te is not None:
         bits = bits.update({"t_te": b_te})
 
-    # Construct the OpenMDAO Problem
-    prob = om.Problem()
-    prob.model = AfOptModel(
-        n_c=n_c,
-        n_t=n_t,
-        fix_te=fix_te,
-        constrain_thickness=constrain_thickness,
-        constrain_area=constrain_area,
-        constrain_moment=constrain_moment,
-    )
-    prob.driver = om.SimpleGADriver(bits=bits, run_parallel=run_parallel, max_gen=gen)
-    if recorder is not None:
-        prob.driver.add_recorder(recorder)
-    prob.setup()
+    driver = om.SimpleGADriver(bits=bits, run_parallel=run_parallel, max_gen=gen)
+    return driver
 
-    # Set the reference airfoil as initial conditions
-    prob["a_c"], prob["a_t"], prob["t_te"] = coords2cst(
-        x_ref, y_u_ref, y_l_ref, n_c, n_t
-    )
 
-    return prob
+def get_slsqp_driver():
+    driver = om.ScipyOptimizeDriver()
+    driver.options["optimizer"] = "SLSQP"
+    driver.options["tol"] = 1e-4
+    # driver.options["maxiter"] = 2
+    if rank == 0:
+        driver.options["disp"] = True
+    else:
+        driver.options["disp"] = False
+    driver.options["debug_print"] = ["objs", "desvars"]
+    return driver
 
 
 def problem2string(prob, dt):
@@ -694,7 +652,6 @@ def main(
     constrain_moment=True,
     cm_ref=None,
     seed=None,
-    sql_file="log.sql",
     repr_file="repr.txt",
     dat_file="optimized.dat",
     png_file="optimized.png",
@@ -721,31 +678,35 @@ def main(
         If constrain_moment is True, this will be the maximum (absolute) moment coefficient. If None, initial Cm is used
     seed : int, optional
         Seed to use for the random number generator which creates an initial population for the genetic algorithm
-    sql_file, repr_file, dat_file, png_file : str, optional
-        Paths where the SQL log, final representation, optimized airfoil coordinates, and output image should be saved.
+    repr_file, dat_file, png_file : str, optional
+        Paths where the final representation, optimized airfoil coordinates, and output image should be saved.
     """
-    recorder = om.SqliteRecorder(sql_file)
-    recorder._parallel = run_parallel
-    recorder._record_on_proc = True
+    # Construct the OpenMDAO Problem
+    prob = om.Problem()
+    prob.model = AfOptModel(
+        n_c=n_c,
+        n_t=n_t,
+        fix_te=fix_te,
+        constrain_thickness=constrain_thickness,
+        constrain_area=constrain_area,
+        constrain_moment=constrain_moment,
+        num_par_fd=n_c + n_t + int(fix_te),
+        )
+    prob.model.approx_totals()
 
-    prob = get_problem(
-        n_c,
-        n_t,
-        b_c,
-        b_t,
-        b_te,
-        gen,
-        fix_te,
-        constrain_thickness,
-        constrain_area,
-        constrain_moment,
-        seed,
-        recorder,
+    prob.driver = get_ga_driver(b_c, b_t, b_te if not fix_te else None, gen, seed)
+    prob.setup()
+
+    # Set the reference airfoil as initial conditions
+    prob["a_c"], prob["a_t"], prob["t_te"] = coords2cst(
+        x_ref, y_u_ref, y_l_ref, n_c, n_t
     )
+    # Set reference values
     prob["Cl_des"] = cl
     if cm_ref is not None:
         prob["Cm_ref"] = cm_ref
 
+    # Analyze the reference airfoil
     t0 = time.time()
     analyze(prob, set_cm_ref=(cm_ref is None))
     dt = time.time() - t0
@@ -753,13 +714,28 @@ def main(
         print("Reference airfoil:")
         print(problem2string(prob, dt))
 
+    # Optimize the problem using a genetic algorithm
     t0 = time.time()
     optimize(prob)
     dt = time.time() - t0
 
-    recorder.shutdown()
-
+    # Do one more analysis to ensure consistency
     analyze(prob, False, False)
+
+    # Show results of GA run
+    if rank == 0:
+        s = problem2string(prob, dt)
+        print("Result of GA:")
+        print(s)
+
+    # Optimize the airfoil locally using SLSQP
+    prob.driver = get_slsqp_driver()
+
+    t0 = time.time()
+    optimize(prob)
+    dt = time.time() - t0
+
+    # Show and write final results
     if rank == 0:
         s = problem2string(prob, dt)
         print("Optimized airfoil:")
@@ -771,6 +747,7 @@ def main(
         fig = plot(prob)
         fig.savefig(png_file)
 
+    # Clean up and exit
     prob.cleanup()
     del prob
 
@@ -778,7 +755,7 @@ def main(
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 18:
+    if len(sys.argv) == 17:
         main(
             cl=float(sys.argv[1]),
             n_c=int(sys.argv[2]),
@@ -793,10 +770,9 @@ if __name__ == "__main__":
             constrain_moment=(sys.argv[11] == "True"),
             cm_ref=None if sys.argv[12] == "None" else float(sys.argv[12]),
             seed=None if sys.argv[13] == "None" else int(sys.argv[13]),
-            sql_file=sys.argv[14],
-            repr_file=sys.argv[15],
-            dat_file=sys.argv[16],
-            png_file=sys.argv[17],
+            repr_file=sys.argv[14],
+            dat_file=sys.argv[15],
+            png_file=sys.argv[16],
         )
     else:
-        main(1.0, 3, 3, gen=9)
+        main(1.0, 3, 3, constrain_moment=False, gen=9)
