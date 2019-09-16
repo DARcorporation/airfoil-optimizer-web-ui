@@ -462,7 +462,7 @@ class AfOptModel(om.Group):
 
 
 def get_ga_driver(b_c, b_t, b_te=None, gen=100, seed=None):
-    # Set a starting seed for the random number generated if given
+    # Set a starting seed for the random number generator if given
     if rank == 0:
         if seed is None:
             seed = int(SystemRandom().random() * (2 ** 31 - 1))
