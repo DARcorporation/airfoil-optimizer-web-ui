@@ -57,7 +57,6 @@ class App extends Component {
     axios.post(`${process.env.REACT_APP_RUNS_SERVICE_URL}/runs`, data)
       .then((res) => {
         this.getRuns();
-        this.setState(this.default_state)
       })
       .catch((err) => { console.log(err); });
   };
