@@ -652,16 +652,18 @@ def main(
         Paths where the final representation, optimized airfoil coordinates, and output image should be saved.
     """
     # Construct the OpenMDAO Problem
-    prob = om.Problem()
-    prob.model = AfOptModel(
+    kwargs = dict(
         n_c=n_c,
         n_t=n_t,
         fix_te=fix_te,
         constrain_thickness=constrain_thickness,
         constrain_area=constrain_area,
         constrain_moment=constrain_moment,
-        num_par_fd=n_c + n_t + int(fix_te),
-        )
+        num_par_fd=n_c + n_t + int(fix_te)
+    )
+
+    prob = om.Problem()
+    prob.model = AfOptModel(**kwargs)
 
     prob.driver = get_ga_driver(b_c, b_t, b_te if not fix_te else None, gen, seed)
     prob.setup()
