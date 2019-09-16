@@ -477,19 +477,6 @@ def get_ga_driver(b_c, b_t, b_te=None, gen=100, seed=None):
     return driver
 
 
-def get_slsqp_driver():
-    driver = om.ScipyOptimizeDriver()
-    driver.options["optimizer"] = "SLSQP"
-    driver.options["tol"] = 1e-4
-    # driver.options["maxiter"] = 2
-    if rank == 0:
-        driver.options["disp"] = True
-    else:
-        driver.options["disp"] = False
-    driver.options["debug_print"] = ["objs", "desvars"]
-    return driver
-
-
 def problem2string(prob, dt):
     """
     Return a representation of the state of the optimization problem.
@@ -538,23 +525,6 @@ def analyze(prob, initial=True, set_cm_ref=False):
             prob["Cm_ref"] = prob["Cm"]
 
         prob.run_model()
-    return prob
-
-
-def optimize(prob):
-    """
-    Optimize the airfoil optimization problem.
-
-    Parameters
-    ----------
-    prob : openmdao.api.Problem
-        Airfoil optimization problem.
-
-    Returns
-    -------
-    openmdao.api.Problem
-    """
-    prob.run_driver()
     return prob
 
 
@@ -692,7 +662,6 @@ def main(
         constrain_moment=constrain_moment,
         num_par_fd=n_c + n_t + int(fix_te),
         )
-    prob.model.approx_totals()
 
     prob.driver = get_ga_driver(b_c, b_t, b_te if not fix_te else None, gen, seed)
     prob.setup()
@@ -706,34 +675,32 @@ def main(
     if cm_ref is not None:
         prob["Cm_ref"] = cm_ref
 
-    # Analyze the reference airfoil
+    # Analyze the reference airfoil and set reference values based on initial run
+    prob.run_model()
+
+    prob["Cd_0"] = prob["Cd"]
+    prob["t_c_0"] = prob["t_c"]
+    prob["A_cs_0"] = prob["A_cs"]
+    if cm_ref is None:
+        prob["Cm_ref"] = prob["Cm"]
+
+    # Run model one more time to have a consistent starting point
     t0 = time.time()
-    analyze(prob, set_cm_ref=(cm_ref is None))
+    prob.run_model()
     dt = time.time() - t0
+
+    # Print results for reference airfoil
     if rank == 0:
         print("Reference airfoil:")
         print(problem2string(prob, dt))
 
     # Optimize the problem using a genetic algorithm
     t0 = time.time()
-    optimize(prob)
+    prob.run_driver()
     dt = time.time() - t0
 
-    # Do one more analysis to ensure consistency
-    analyze(prob, False, False)
-
-    # Show results of GA run
-    if rank == 0:
-        s = problem2string(prob, dt)
-        print("Result of GA:")
-        print(s)
-
-    # Optimize the airfoil locally using SLSQP
-    prob.driver = get_slsqp_driver()
-
-    t0 = time.time()
-    optimize(prob)
-    dt = time.time() - t0
+    # Run model one more time to ensure consistency
+    prob.run_model()
 
     # Show and write final results
     if rank == 0:
