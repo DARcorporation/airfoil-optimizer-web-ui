@@ -8,19 +8,16 @@ WORKDIR /tmp
 # Install stuff using apt-get
 RUN apt-get -qq update && \
     apt-get install -y --no-install-recommends apt-utils && \
-    apt-get -y install nano && \
-    apt-get -y purge cmake && \
-    apt-get -y autoremove && \
-    pip3 install 'cmake>=3.12'
+    apt-get -y install nano
 
 # Install requirements with pip
 COPY ./requirements.txt /tmp/requirements.txt
-RUN pip3 install --upgrade -r requirements.txt
+RUN pip install --upgrade -r requirements.txt
 
 # Install XFOIL
 RUN wget -O xfoil.tar.gz https://github.com/daniel-de-vries/xfoil-python/archive/1.0.3.tar.gz && \
     tar -xzf xfoil.tar.gz && \
-    pip3 install ./xfoil-python-1.0.3 && \
+    pip install ./xfoil-python-1.0.3 && \
     rm -rf /tmp/* && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -33,4 +30,4 @@ ENV LANG=C.UTF-8
 ENV PYTHONPATH=$PYTHONPATH:/usr/src/app/af_opt
 
 # run server
-CMD python3 -u runner.py
+CMD python -u runner.py
