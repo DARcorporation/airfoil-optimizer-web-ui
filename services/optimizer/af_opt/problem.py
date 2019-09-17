@@ -13,6 +13,7 @@ from xfoil.model import Airfoil
 
 from .cst import cst, fit
 from .util import cosspace
+from .genetic_algorithm_driver import SimpleGADriver
 
 # Ensure MPI is defined
 try:
@@ -473,7 +474,7 @@ def get_ga_driver(b_c, b_t, b_te=None, gen=100, seed=None):
     if b_te is not None:
         bits = bits.update({"t_te": b_te})
 
-    driver = om.SimpleGADriver(bits=bits, run_parallel=run_parallel, max_gen=gen)
+    driver = SimpleGADriver(bits=bits, run_parallel=run_parallel, max_gen=gen)
     return driver
 
 

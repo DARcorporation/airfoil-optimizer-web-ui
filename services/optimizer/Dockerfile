@@ -24,9 +24,6 @@ RUN wget -O xfoil.tar.gz https://github.com/daniel-de-vries/xfoil-python/archive
     rm -rf /tmp/* && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Modify /usr/local/lib/python3.6/dist-packages/openmdao/drivers/genetic_algorithm_driver.py with tqdm
-COPY ./genetic_algorithm_driver.py /usr/local/lib/python3.6/dist-packages/openmdao/drivers/
-
 # Add source and switch working directory to it
 COPY . /usr/src/app
 WORKDIR /usr/src/app
