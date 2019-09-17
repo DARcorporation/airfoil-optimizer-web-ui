@@ -659,8 +659,7 @@ def main(
         fix_te=fix_te,
         constrain_thickness=constrain_thickness,
         constrain_area=constrain_area,
-        constrain_moment=constrain_moment,
-        num_par_fd=n_c + n_t + int(fix_te)
+        constrain_moment=constrain_moment
     )
 
     prob = om.Problem()
