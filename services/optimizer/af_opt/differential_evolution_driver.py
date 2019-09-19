@@ -14,264 +14,153 @@ else:
     n_proc = MPI.COMM_WORLD.size
 
 
+class EvolutionaryStrategy:
+
+    def __init__(self, string, rng):
+        self.name = string
+        self.rng = rng
+
+    def mutate(self, parent_idx, population, mutation_rate):
+        idxs = [idx for idx in range(population.shape[0]) if idx != parent_idx]
+        a, b, c = population[self.rng.choice(idxs, size=3, replace=False)]
+        return a + mutation_rate * (b - c)
+
+    def crossover(self, parent, child, probability):
+        n = len(parent)
+        p = self.rng.uniform(size=n) < probability
+        if not np.any(p):
+            p[self.rng.integers(n)] = True
+        return np.where(p, child, parent)
+
+    def repair(self, child):
+        return np.clip(child, 0, 1)
+
+    def __call__(self, target_idx, population, mutation_rate, crossover_probability):
+        child = self.mutate(target_idx, population, mutation_rate)
+        child = self.crossover(population[target_idx], child, crossover_probability)
+        child = self.repair(child)
+        return child
+
+
 class DifferentialEvolution:
 
-    def __init__(self,
-                 objfun, comm=None, model_mpi=None,
-                 gen=1, variant=2, variant_adaptv=1, ftol=1e-6, xtol=1e-6,
-                 memory=False, seed=None):
-        if 1 > variant > 18:
-            raise ValueError("The Differential Evolution mutation variant must be in [1, ... 18].")
-        if 1 > variant_adaptv > 2:
-            raise ValueError("The variant for self-adaption must be in [1, 2].")
+    @staticmethod
+    def mpi_fobj_wrapper(fobj):
+        def wrapped(x, ii):
+            return fobj(x), ii
+        return wrapped
 
-        self.objfun = objfun
+    def __init__(self, fobj, bounds,
+                 mut=0.85, crossp=1., strategy='rand/1/bin',
+                 max_gen=100, tolx=1e-6, tolf=1e-6,
+                 n_pop=None, seed=None, comm=None, model_mpi=None):
+        self.fobj = fobj if comm is None else self.mpi_fobj_wrapper(fobj)
+
+        self._lb, self._ub = np.asarray(bounds).T
+        self._range = self._ub - self._lb
+
+        self.f = mut
+        self.cr = crossp
+
+        self.max_gen = max_gen
+        self.tolx = tolx
+        self.tolf = tolf
+
+        self.n_dim = len(bounds)
+        self.n_pop = n_pop if n_pop is not None else self.n_dim * 5
+
+        self._rng = np.random.default_rng(seed)
+
         self.comm = comm
         self.model_mpi = model_mpi
 
-        self.gen = gen
-        self.variant = variant
-        self.variant_adaptv = variant_adaptv
-        self.ftol = ftol
-        self.xtol = xtol
-        self.memory = memory
-        self.seed = seed
+        self.strategy = EvolutionaryStrategy(strategy, self._rng)
 
-        self.verbosity = 0
+        self.pop = self._rng.uniform(size=(self.n_pop, self.n_dim))
+        self.fit = self(self.pop)
+        self.best_idx, self.worst_idx = 0, 0
+        self.best, self.worst = None, None
+        self.best_fit, self.worst_fit = 0, 0
+        self.update(self.pop, self.fit)
 
-        self._random_state = np.random.RandomState(seed)
-        self._F = np.empty((0,))
-        self._CR = np.empty((0,))
+        self.generation = 0
 
-    def evaluate(self, pop, comm=None):
-        n_pop = pop.shape[0]
-        fitness = np.full((n_pop,), np.inf)
-        success = np.full((n_pop,), False)
+    def __iter__(self):
+        while self.generation < self.max_gen:
+            pop_new = self.offspring()
+            fit_new = self(pop_new)
+            self.update(pop_new, fit_new)
 
+            yield self
+            self.generation += 1
+
+            dx = np.sum((self._range * (self.worst - self.best)) ** 2) ** 0.5
+            df = np.abs(self.worst_fit - self.best_fit)
+            if dx < self.tolx:
+                break
+            if df < self.tolf:
+                break
+
+    def __call__(self, pop):
         # Evaluate generation
-        if comm is not None:
-            # Parallel
-
+        if self.comm is not None:
             # Use population of rank 0 on all processors
-            pop = comm.bcast(pop, root=0)
+            pop = self.comm.bcast(pop, root=0)
 
             cases = [((item, ii), None) for ii, item in enumerate(pop)]
             # Pad the cases with some dummy cases to make the cases divisible amongst the procs.
-            extra = len(cases) % comm.size
+            extra = len(cases) % self.comm.size
             if extra > 0:
-                for j in range(comm.size - extra):
+                for j in range(self.comm.size - extra):
                     cases.append(cases[-1])
 
-            results = concurrent_eval(self.objfun, cases, comm, allgather=True,
+            results = concurrent_eval(self.fobj, cases, self.comm, allgather=True,
                                       model_mpi=self.model_mpi)
 
+            fit = np.full((self.n_pop,), np.inf)
             for result in results:
-                returns, traceback = result
-
-                if returns:
-                    val, _success, ii = returns
-                    if _success:
-                        fitness[ii] = val
-                        success[ii] = True
-                else:
-                    # Print the traceback if it fails
-                    print('A case failed:')
-                    print(traceback)
+                val, ii = result
+                fit[ii] = val
         else:
-            # Serial
-            for ii in range(n_pop):
-                x = pop[ii]
+            fit = [self.fobj(ind) for ind in pop]
+        return np.asarray(fit)
 
-                fitness[ii], success[ii], _ = self.objfun(x, 0)
+    def offspring(self):
+        pop_old_norm = (np.copy(self.pop) - self._lb) / self._range
+        pop_new_norm = [self.strategy(idx, pop_old_norm, self.f, self.cr) for idx in range(self.n_pop)]
+        return self._lb + self._range * np.asarray(pop_new_norm)
 
-        return fitness, success
+    def update(self, pop_new, fit_new):
+        improved_idxs = np.argwhere(fit_new <= self.fit)
+        self.pop[improved_idxs] = pop_new[improved_idxs]
+        self.fit[improved_idxs] = fit_new[improved_idxs]
 
-    def evolve(self, pop, vlb, vub):
-        if pop.shape[0] < 7:
-            raise ValueError("Differential Evolution needs at least 7 individuals in the population.")
+        self.best_idx = np.argmin(self.fit)
+        self.best = self.pop[self.best_idx]
+        self.best_fit = self.fit[self.best_idx]
 
-        comm = self.comm
-        n_pop = pop.shape[0]
-        n_dim = pop.shape[1]
+        self.worst_idx = np.argmax(self.fit)
+        self.worst = self.pop[self.worst_idx]
+        self.worst_fit = self.fit[self.worst_idx]
 
-        # Initial evaluation of population
-        fit, success = self.evaluate(pop, comm)
 
-        # Global bests
-        best_idx = np.argmin(fit)
-        best_x = pop[best_idx]
-        best_f = fit[best_idx]
-        r = np.empty((7,))  # Indices of 7 selected individuals
+def paraboloid(x):
+    import time
+    time.sleep(0.01)
+    return np.sum(x * x)
 
-        # Initialize F and CR vectors
-        if self._CR.size != n_pop or self._F.size != n_pop or not self.memory:
-            if self.variant_adaptv == 1:
-                self._CR = self._random_state.rand(n_pop, 1)
-                self._F = self._random_state.rand(n_pop, 1) * 0.9 + 0.1
-            elif self.variant_adaptv == 2:
-                self._CR = self._random_state.normal(0., 1., (n_pop,)) * 0.15 + 0.5
-                self._F = self._random_state.normal(0., 1., (n_pop,)) * 0.15 + 0.5
 
-        # Global iteration bests for F and CR
-        best_F = self._F[0]
-        best_CR = self._CR[0]
+def main():
+    from yabox.algorithms.de import DE
+    comm = None if not MPI else MPI.COMM_WORLD
+    de = DifferentialEvolution(paraboloid, bounds=[(-500, 500)] * 2, comm=comm)
+    results = [generation for generation in tqdm(de, total=100)]
 
-        # Main loop
-        idxs = np.empty((n_pop,))
-        tmp = np.empty_like(pop)
+    print()
+    print(f"Optimization complete!")
+    print(f"x*: {results[-1].best}")
+    print(f"f*: {results[-1].best_fit}")
 
-        gen_iter = range(self.gen + 1)
-        if rank == 0:
-            gen_iter = tqdm(gen_iter, ascii=True)
 
-        nfit = 0
-        F, CR = np.empty((n_pop,)), np.empty((n_pop,))
-        for generation in gen_iter:
-            pop_old = np.copy(pop)
-            pop_tmp = np.copy(pop)
-
-            for i in range(n_pop):
-                idxs = np.linspace(n_pop)
-                for j in range(7):  # Durstenfeld's algorithm to select 7 indexes at random
-                    idx = self._random_state.randint(0, n_pop - 1 - j)
-                    r[j] = idxs[idx]
-                    idxs[[idx, n_pop - 1 - j]] = idxs[[n_pop - 1 - j, idx]]
-
-                # Adapt amplification factor and crossover probability for variant_adpttv= 1
-                F[i], CR[i] = 0., 0.
-                if self.variant_adaptv == 1:
-                    F[i] = self._F[i] if self._random_state.randn() < 0.9 else self._random_state.randn() * 0.9 + 0.1
-                    CR[i] = self._CR[i] if self._random_state.randn() < 0.9 else self._random_state.randn()
-
-                n = self._random_state.randint(0, n_dim)
-                # -------DE/best/1/exp--------------------------------------------------------------------
-                # -------The oldest DE variant but still not bad. However, we have found several----------
-                # -------optimization problems where misconvergence occurs.-------------------------------
-                if self.variant == 1:
-                    if self.variant_adaptv == 2:
-                        F[i] = best_F + \
-                            self._random_state.normal(0., 1.) * 0.5 * (self._F[r[1]] - self._F[r[2]])
-                        CR[i] = best_CR + \
-                             self._random_state.normal(0., 1.) * 0.5 * (self._CR[r[1]] - self._CR[r[2]])
-                    for L in range(n_dim):
-                        pop_tmp[i, n] = best_x[n] + \
-                                 F[i] * (pop_old[r[1]][n] - pop_old[r[2]][n])
-                        n = (n + 1) % n_dim
-                        if self._random_state.randn() < CR[i]:
-                            break
-
-                # -------DE/rand/1/exp-------------------------------------------------------------------
-                elif self.variant == 2:
-                    if self.variant_adaptv == 2:
-                        F[i] = self._F[i] + \
-                            self._random_state.normal(0., 1.) * 0.5 * (self._F[r[1]] - self._F[r[2]])
-                        CR[i] = self._CR[i] + \
-                             self._random_state.normal(0., 1.) * 0.5 * (self._CR[r[1]] - self._CR[r[2]])
-                    for L in range(n_dim):
-                        pop_tmp[i, n] = pop_old[r[0]][n] + \
-                                 F[i] * (pop_old[r[1]][n] - pop_old[r[2]][n])
-                        n = (n + 1) % n_dim
-                        if self._random_state.randn() < CR[i]:
-                            break
-
-                # -------DE/rand-to-best/1/exp-----------------------------------------------------------
-                elif self.variant == 3:
-                    if self.variant_adaptv == 2:
-                        F[i] = self._F[i] + \
-                            self._random_state.normal(0., 1.) * 0.5 * (best_F - self._F[i]) + \
-                            self._random_state.normal(0., 1.) * 0.5 * (self._F[r[0]] - self._F[r[1]])
-                        CR[i] = self._CR[i] + \
-                             self._random_state.normal(0., 1.) * 0.5 * (best_CR - self._CR[i]) + \
-                             self._random_state.normal(0., 1.) * 0.5 * (self._CR[r[0]] - self._CR[r[1]])
-                    for L in range(n_dim):
-                        pop_tmp[i, n] = tmp[n] + \
-                                 F[i] * (best_x[n] - tmp[n]) + \
-                                 F[i] * (pop_old[r[0]][n] - pop_old[r[1]][n])
-                        n = (n + 1) % n_dim
-                        if self._random_state.randn() < CR[i]:
-                            break
-
-                # -------DE/best/2/exp is another powerful variant worth trying--------------------------
-                elif self.variant == 4:
-                    if self.variant_adaptv == 2:
-                        F[i] = best_F + \
-                            self._random_state.normal(0., 1.) * 0.5 * (self._F[r[0]] - self._F[r[1]]) + \
-                            self._random_state.normal(0., 1.) * 0.5 * (self._F[r[2]] - self._F[r[3]])
-                        CR[i] = best_CR + \
-                             self._random_state.normal(0., 1.) * 0.5 * (self._CR[r[0]] - self._CR[r[1]]) + \
-                             self._random_state.normal(0., 1.) * 0.5 * (self._CR[r[2]] - self._CR[r[3]])
-                    for L in range(n_dim):
-                        pop_tmp[i, n] = best_x[n] + \
-                                 F[i] * (pop_old[r[0]][n] - pop_old[r[1]][n]) + \
-                                 F[i] * (pop_old[r[2]][n] - pop_old[r[3]][n])
-                        n = (n + 1) % n_dim
-                        if self._random_state.randn() < CR[i]:
-                            break
-
-                # -------DE/rand/2/exp seems to be a robust optimizer for many functions-------------------
-                elif self.variant == 5:
-                    if self.variant_adaptv == 2:
-                        F[i] = self._F[r[4]] + \
-                            self._random_state.normal(0., 1.) * 0.5 * (self._F[r[0]] - self._F[r[1]]) + \
-                            self._random_state.normal(0., 1.) * 0.5 * (self._F[r[2]] - self._F[r[3]])
-                        CR[i] = self._CR[r[4]] + \
-                             self._random_state.normal(0., 1.) * 0.5 * (self._CR[r[0]] - self._CR[r[1]]) + \
-                             self._random_state.normal(0., 1.) * 0.5 * (self._CR[r[2]] - self._CR[r[3]])
-                    for L in range(n_dim):
-                        pop_tmp[i, n] = pop_old[r[4]][n] + \
-                                 F[i] * (pop_old[r[0]][n] - pop_old[r[1]][n]) + \
-                                 F[i] * (pop_old[r[2]][n] - pop_old[r[3]][n])
-                        n = (n + 1) % n_dim
-                        if self._random_state.randn() < CR[i]:
-                            break
-
-                else:
-                    raise NotImplementedError
-
-                # Force feasibility
-                for j in range(n_dim):
-                    if pop_tmp[i, j] < vlb[j] or tmp[j] > vub[j]:
-                        pop_tmp[i, j] = vlb[i] + self._random_state.randn() * (vub[j] - vlb[i])
-
-            # Evaluate current population
-            fit_old = np.copy(fit)
-            fit_tmp, success = self.evaluate(pop_old, comm)
-            nfit += np.count_nonzero(success)
-
-            # Replace individuals if they have improved
-            idxs = np.argwhere(fit_tmp <= fit_old)
-            pop[idxs] = pop_tmp[idxs]
-            fit[idxs] = fit_tmp[idxs]
-            self._CR[idxs] = CR[idxs]
-            self._F[idxs] = F[idxs]
-
-            # Find best performing point in this generation.
-            min_idx = np.argmin(fit)
-            min_f = np.min(fit)
-
-            # Replace global bests if it is an improvement
-            if min_f <= best_f:
-                best_f = min_f
-                best_x = pop[min_idx]
-                best_F = F[min_idx]
-                best_CR = CR[min_idx]
-
-            # Check the exit conditions
-            best_idx = np.argmin(fit)
-            worst_idx = np.argmax(fit)
-            dx = np.sum(np.abs(pop[worst_idx] - pop[best_idx]))
-            if dx < self.xtol:
-                if self.verbosity:
-                    print(f"Exit condition -- xtol < {self.xtol}")
-                return pop
-
-            df = abs(fit[worst_idx] - fit[best_idx])
-            if df < self.ftol:
-                if self.verbosity:
-                    print(f"Exit condition -- ftol < {self.ftol}")
-                return pop
-
-        # End main generation
-        if self.verbosity:
-            print(f"Exit condition -- generations = {self.gen}")
-        return pop
+if __name__ == '__main__':
+    main()
