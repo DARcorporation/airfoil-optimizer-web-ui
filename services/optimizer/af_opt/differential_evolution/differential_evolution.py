@@ -1,3 +1,4 @@
+"""Definition of the Differential Evolution algorithm"""
 import numpy as np
 from openmdao.utils.concurrent import concurrent_eval
 
@@ -5,6 +6,18 @@ from .evolution_strategy import EvolutionStrategy
 
 
 def mpi_fobj_wrapper(fobj):
+    """Wrapper for the objective function to keep track of individual indices when running under MPI.
+
+    Parameters
+    ----------
+    fobj : callable
+        Original objective function
+
+    Returns
+    -------
+    callable
+        Wrapped function which, in addition to x, takes the individual's index and returns it along with f
+    """
     def wrapped(x, ii):
         return fobj(x), ii
 
@@ -12,6 +25,49 @@ def mpi_fobj_wrapper(fobj):
 
 
 class DifferentialEvolution:
+    """Differential evolution algorithm.
+
+    Attributes
+    ----------
+    fobj : callable
+        Objective function
+    lb, ub : array_like
+        Lower and upper bounds
+    range : array_like
+        Distances between the lower and upper bounds
+    f, cr : float
+        Mutation rate and crossover probability
+    max_gen : int
+        Maximum number of generations
+    tolx, tolf : float
+        Tolerances on the design vectors' and objective function values' spreads
+    n_dim : int
+        Number of dimension of the problem
+    n_pop : int
+        Population size
+    rng : np.random.Generator
+        Random number generator
+    comm : MPI communicator or None
+        The MPI communicator that will be used objective evaluation for each generation
+    model_mpi : None or tuple
+        If the model in fobj is also parallel, then this will contain a tuple with the the
+        total number of population points to evaluate concurrently, and the color of the point
+        to evaluate on this rank
+    strategy : EvolutionStrategy
+        Evolution strategy to use for procreation
+    pop : np.array
+        List of the individuals' chromosomes making up the current population
+    fit : np.array
+        Fitness of the individuals in the population
+    best_idx, worst_idx : int
+        Index of the best and worst individuals of the population
+    best, worst : np.array
+        Chromosomes of the best and worst individuals in the population
+    best_fit, worst_fit : np.array
+        Fitness of the best and worst individuals in the population
+    generation : int
+        Generation counter
+    """
 
     def __init__(self, fobj, bounds,
                  mut=0.85, crossp=1., strategy=None,
@@ -19,8 +75,8 @@ class DifferentialEvolution:
                  n_pop=None, seed=None, comm=None, model_mpi=None):
         self.fobj = fobj if comm is None else mpi_fobj_wrapper(fobj)
 
-        self._lb, self._ub = np.asarray(bounds).T
-        self._range = self._ub - self._lb
+        self.lb, self.ub = np.asarray(bounds).T
+        self.range = self.ub - self.lb
 
         self.f = mut
         self.cr = crossp
@@ -32,7 +88,7 @@ class DifferentialEvolution:
         self.n_dim = len(bounds)
         self.n_pop = n_pop if n_pop is not None else self.n_dim * 5
 
-        self._rng = np.random.default_rng(seed)
+        self.rng = np.random.default_rng(seed)
 
         self.comm = comm
         self.model_mpi = model_mpi
@@ -41,7 +97,7 @@ class DifferentialEvolution:
         if strategy is None:
             self.strategy = EvolutionStrategy("best-to-rand/1/exp")
 
-        self.pop = self._rng.uniform(self._lb, self._ub, size=(self.n_pop, self.n_dim))
+        self.pop = self.rng.uniform(self.lb, self.ub, size=(self.n_pop, self.n_dim))
         self.fit = self(self.pop)
         self.best_idx, self.worst_idx = 0, 0
         self.best, self.worst = None, None
@@ -51,15 +107,22 @@ class DifferentialEvolution:
         self.generation = 0
 
     def __iter__(self):
+        """Main evolution loop
+
+        Yields
+        ------
+        self
+            A copy of this class at each generation
+        """
         while self.generation < self.max_gen:
-            pop_new = self.offspring()
+            pop_new = self.procreate()
             fit_new = self(pop_new)
             self.update(pop_new, fit_new)
 
             yield self
             self.generation += 1
 
-            dx = np.sum((self._range * (self.worst - self.best)) ** 2) ** 0.5
+            dx = np.sum((self.range * (self.worst - self.best)) ** 2) ** 0.5
             df = np.abs(self.worst_fit - self.best_fit)
             if dx < self.tolx:
                 break
@@ -67,6 +130,23 @@ class DifferentialEvolution:
                 break
 
     def __call__(self, pop):
+        """Evaluate the fitness of the given population.
+
+        Parameters
+        ----------
+        pop : array_like
+            List of chromosomes of the individuals in the population
+
+        Returns
+        -------
+        np.array
+            Fitness of the inviduals in the given population
+
+        Notes
+        -----
+        If this class has an MPI communicator the individuals will be evaluated in parallel.
+        Otherwise function evaluation will be serial.
+        """
         # Evaluate generation
         if self.comm is not None:
             # Use population of rank 0 on all processors
@@ -90,12 +170,32 @@ class DifferentialEvolution:
             fit = [self.fobj(ind) for ind in pop]
         return np.asarray(fit)
 
-    def offspring(self):
-        pop_old_norm = (np.copy(self.pop) - self._lb) / self._range
-        pop_new_norm = [self.strategy(idx, pop_old_norm, self.fit, self.f, self.cr, self._rng) for idx in range(self.n_pop)]
-        return self._lb + self._range * np.asarray(pop_new_norm)
+    def procreate(self):
+        """Generate a new population using the selected evolution strategy.
+
+        Returns
+        -------
+        np.array
+            Chromosomes of the individuals in the next generation
+        """
+        pop_old_norm = (np.copy(self.pop) - self.lb) / self.range
+        pop_new_norm = [self.strategy(idx, pop_old_norm, self.fit, self.f, self.cr, self.rng) for idx in range(self.n_pop)]
+        return self.lb + self.range * np.asarray(pop_new_norm)
 
     def update(self, pop_new, fit_new):
+        """Update the population and identify the new best and worst individuals.
+
+        Parameters
+        ----------
+        pop_new : np.array
+            Proposed new population resulting from procreation
+        fit_new : np.array
+            Fitness of the individuals in the new population
+
+        Notes
+        -----
+        Individuals in the old population will only be replaced by the new ones if they have improved fitness.
+        """
         improved_idxs = np.argwhere(fit_new <= self.fit)
         self.pop[improved_idxs] = pop_new[improved_idxs]
         self.fit[improved_idxs] = fit_new[improved_idxs]
