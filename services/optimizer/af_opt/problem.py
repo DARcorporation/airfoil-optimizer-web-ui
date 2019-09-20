@@ -5,6 +5,7 @@ import sys
 import time
 
 from datetime import timedelta
+from differential_evolution import DifferentialEvolutionDriver
 from multiprocessing import TimeoutError
 from multiprocessing.pool import ThreadPool
 from random import SystemRandom
@@ -13,7 +14,6 @@ from xfoil.model import Airfoil
 
 from .cst import cst, fit
 from .util import cosspace
-from .genetic_algorithm_driver import SimpleGADriver
 
 # Ensure MPI is defined
 try:
@@ -155,7 +155,7 @@ def xfoil_worker(xf, cl_spec, consistency_check=True, consistency_tol=1e-4):
     if np.abs(cd3 - cd2) < consistency_tol:
         return cd2, cm2
 
-    return (cd1 + cd2 + cd3) / 3.0, (cm1 + cm2 + cm3) / 3.0
+    return np.nan, np.nan
 
 
 def analyze_airfoil(
@@ -462,19 +462,8 @@ class AfOptModel(om.Group):
         return s
 
 
-def get_ga_driver(b_c, b_t, b_te=None, gen=100, seed=None):
-    # Set a starting seed for the random number generator if given
-    if rank == 0:
-        if seed is None:
-            seed = int(SystemRandom().random() * (2 ** 31 - 1))
-        print(f"SimpleGADriver_seed: {seed}")
-        os.environ["SimpleGADriver_seed"] = str(seed)
-
-    bits = {"a_c": b_c, "a_t": b_t}
-    if b_te is not None:
-        bits = bits.update({"t_te": b_te})
-
-    driver = SimpleGADriver(bits=bits, run_parallel=run_parallel, max_gen=gen)
+def get_de_driver(gen=100, seed=None):
+    driver = DifferentialEvolutionDriver(run_parallel=run_parallel, max_gen=gen, show_progress=True)
     return driver
 
 
@@ -665,7 +654,7 @@ def main(
     prob = om.Problem()
     prob.model = AfOptModel(**kwargs)
 
-    prob.driver = get_ga_driver(b_c, b_t, b_te if not fix_te else None, gen, seed)
+    prob.driver = get_de_driver(gen, seed)
     prob.setup()
 
     # Set the reference airfoil as initial conditions
