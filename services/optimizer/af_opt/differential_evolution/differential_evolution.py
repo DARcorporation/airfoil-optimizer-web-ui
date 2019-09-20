@@ -1,60 +1,23 @@
-import copy
 import numpy as np
-
 from openmdao.utils.concurrent import concurrent_eval
-from openmdao.utils.mpi import MPI
-from tqdm import tqdm
 
-# Detect whether the script is being run under MPI and grab the rank
-if not MPI:
-    rank = 0
-    n_proc = 1
-else:
-    rank = MPI.COMM_WORLD.rank
-    n_proc = MPI.COMM_WORLD.size
+from .evolution_strategy import EvolutionStrategy
 
 
-class EvolutionaryStrategy:
+def mpi_fobj_wrapper(fobj):
+    def wrapped(x, ii):
+        return fobj(x), ii
 
-    def __init__(self, string, rng):
-        self.name = string
-        self.rng = rng
-
-    def mutate(self, parent_idx, population, mutation_rate):
-        idxs = [idx for idx in range(population.shape[0]) if idx != parent_idx]
-        a, b, c = population[self.rng.choice(idxs, size=3, replace=False)]
-        return a + mutation_rate * (b - c)
-
-    def crossover(self, parent, child, probability):
-        n = len(parent)
-        p = self.rng.uniform(size=n) < probability
-        if not np.any(p):
-            p[self.rng.integers(n)] = True
-        return np.where(p, child, parent)
-
-    def repair(self, child):
-        return np.clip(child, 0, 1)
-
-    def __call__(self, target_idx, population, mutation_rate, crossover_probability):
-        child = self.mutate(target_idx, population, mutation_rate)
-        child = self.crossover(population[target_idx], child, crossover_probability)
-        child = self.repair(child)
-        return child
+    return wrapped
 
 
 class DifferentialEvolution:
 
-    @staticmethod
-    def mpi_fobj_wrapper(fobj):
-        def wrapped(x, ii):
-            return fobj(x), ii
-        return wrapped
-
     def __init__(self, fobj, bounds,
-                 mut=0.85, crossp=1., strategy='rand/1/bin',
+                 mut=0.85, crossp=1., strategy=None,
                  max_gen=100, tolx=1e-6, tolf=1e-6,
                  n_pop=None, seed=None, comm=None, model_mpi=None):
-        self.fobj = fobj if comm is None else self.mpi_fobj_wrapper(fobj)
+        self.fobj = fobj if comm is None else mpi_fobj_wrapper(fobj)
 
         self._lb, self._ub = np.asarray(bounds).T
         self._range = self._ub - self._lb
@@ -74,9 +37,11 @@ class DifferentialEvolution:
         self.comm = comm
         self.model_mpi = model_mpi
 
-        self.strategy = EvolutionaryStrategy(strategy, self._rng)
+        self.strategy = strategy
+        if strategy is None:
+            self.strategy = EvolutionStrategy("best-to-rand/1/exp")
 
-        self.pop = self._rng.uniform(size=(self.n_pop, self.n_dim))
+        self.pop = self._rng.uniform(self._lb, self._ub, size=(self.n_pop, self.n_dim))
         self.fit = self(self.pop)
         self.best_idx, self.worst_idx = 0, 0
         self.best, self.worst = None, None
@@ -127,7 +92,7 @@ class DifferentialEvolution:
 
     def offspring(self):
         pop_old_norm = (np.copy(self.pop) - self._lb) / self._range
-        pop_new_norm = [self.strategy(idx, pop_old_norm, self.f, self.cr) for idx in range(self.n_pop)]
+        pop_new_norm = [self.strategy(idx, pop_old_norm, self.fit, self.f, self.cr, self._rng) for idx in range(self.n_pop)]
         return self._lb + self._range * np.asarray(pop_new_norm)
 
     def update(self, pop_new, fit_new):
@@ -142,25 +107,3 @@ class DifferentialEvolution:
         self.worst_idx = np.argmax(self.fit)
         self.worst = self.pop[self.worst_idx]
         self.worst_fit = self.fit[self.worst_idx]
-
-
-def paraboloid(x):
-    import time
-    time.sleep(0.01)
-    return np.sum(x * x)
-
-
-def main():
-    from yabox.algorithms.de import DE
-    comm = None if not MPI else MPI.COMM_WORLD
-    de = DifferentialEvolution(paraboloid, bounds=[(-500, 500)] * 2, comm=comm)
-    results = [generation for generation in tqdm(de, total=100)]
-
-    print()
-    print(f"Optimization complete!")
-    print(f"x*: {results[-1].best}")
-    print(f"f*: {results[-1].best_fit}")
-
-
-if __name__ == '__main__':
-    main()
