@@ -9,6 +9,8 @@ class Run(db.Model):
     n_c = db.Column(db.Integer(), nullable=False)
     n_t = db.Column(db.Integer(), nullable=False)
     gen = db.Column(db.Integer(), nullable=False, default=100)
+    tolx = db.Column(db.Float(), nullable=False)
+    tolf = db.Column(db.Float(), nullable=False)
     fix_te = db.Column(db.Boolean(), nullable=False, default=True)
     constrain_thickness = db.Column(db.Boolean(), nullable=False, default=True)
     constrain_area = db.Column(db.Boolean(), nullable=False, default=True)
@@ -25,6 +27,8 @@ class Run(db.Model):
         n_c,
         n_t,
         gen=100,
+        tolx=1e-8,
+        tolf=1e-8,
         fix_te=True,
         constrain_thickness=True,
         constrain_area=True,
@@ -40,6 +44,8 @@ class Run(db.Model):
         self.n_c = n_c
         self.n_t = n_t
         self.gen = gen
+        self.tolx = tolx
+        self.tolf = tolf
         self.fix_te = fix_te
         self.constrain_thickness = constrain_thickness
         self.constrain_area = constrain_area

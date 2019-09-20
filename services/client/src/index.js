@@ -15,6 +15,8 @@ class App extends Component {
       n_t: 3,
       fix_te: true,
       gen: 0,
+      tolx: 1e-8,
+      tolf: 1e-8,
       constrain_thickness: true,
       constrain_area: true,
       constrain_moment: false,
@@ -42,6 +44,8 @@ class App extends Component {
       n_t: this.state.n_t,
       fix_te: this.fix_te,
       gen: this.state.gen,
+      tolx: this.state.tolx,
+      tolf: this.state.tolf,
       constrain_thickness: this.state.constrain_thickness,
       constrain_area: this.state.constrain_area,
       constrain_moment: this.state.constrain_moment,
@@ -83,6 +87,8 @@ class App extends Component {
                 n_t={this.state.n_t}
                 fix_te={this.state.fix_te}
                 gen={this.state.gen}
+                tolx={this.state.tolx}
+                tolf={this.state.tolf}
                 constrain_thickness={this.state.constrain_thickness}
                 constrain_area={this.state.constrain_area}
                 constrain_moment={this.state.constrain_moment}

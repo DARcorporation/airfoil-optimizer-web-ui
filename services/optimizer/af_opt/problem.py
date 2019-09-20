@@ -462,8 +462,10 @@ class AfOptModel(om.Group):
         return s
 
 
-def get_de_driver(gen=100, seed=None):
-    driver = DifferentialEvolutionDriver(run_parallel=run_parallel, max_gen=gen, show_progress=True)
+def get_de_driver(gen=100, tolx=1e-8, tolf=1e-8, seed=None):
+    driver = DifferentialEvolutionDriver(run_parallel=run_parallel,
+                                         max_gen=gen, tolx=tolx, tolf=tolf,
+                                         show_progress=True)
     return driver
 
 
@@ -479,11 +481,6 @@ def problem2string(prob, dt):
         Time in seconds elapsed since last evaluation
     """
     s = prob.model.__repr__() + ",\n"
-    if isinstance(prob.driver, om.SimpleGADriver):
-        s += f"b_c: {prob.driver.options['bits']['a_c']}, "
-        s += f"b_t: {prob.driver.options['bits']['a_t']}, "
-        if not prob.model.options["fix_te"]:
-            s += f"b_te: {prob.driver.options['bits']['t_te']}, \n"
     s += f"Time elapsed: {timedelta(seconds=dt)}"
     return s
 
@@ -603,6 +600,8 @@ def main(
     n_c,
     n_t,
     gen=100,
+    tolx=1e-8,
+    tolf=1e-8,
     fix_te=True,
     constrain_thickness=True,
     constrain_area=True,
@@ -648,7 +647,7 @@ def main(
     prob = om.Problem()
     prob.model = AfOptModel(**kwargs)
 
-    prob.driver = get_de_driver(gen, seed)
+    prob.driver = get_de_driver(gen, tolx, tolf, seed)
     prob.setup()
 
     # Set the reference airfoil as initial conditions
@@ -707,21 +706,23 @@ def main(
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 14:
+    if len(sys.argv) == 16:
         main(
             cl=float(sys.argv[1]),
             n_c=int(sys.argv[2]),
             n_t=int(sys.argv[3]),
             gen=int(sys.argv[4]),
-            fix_te=(sys.argv[5] == "True"),
-            constrain_thickness=(sys.argv[6] == "True"),
-            constrain_area=(sys.argv[7] == "True"),
-            constrain_moment=(sys.argv[8] == "True"),
-            cm_ref=None if sys.argv[9] == "None" else float(sys.argv[9]),
-            seed=None if sys.argv[10] == "None" else int(sys.argv[10]),
-            repr_file=sys.argv[11],
-            dat_file=sys.argv[12],
-            png_file=sys.argv[13],
+            tolx=float(sys.argv[5]),
+            tolf=float(sys.argv[6]),
+            fix_te=(sys.argv[7] == "True"),
+            constrain_thickness=(sys.argv[8] == "True"),
+            constrain_area=(sys.argv[9] == "True"),
+            constrain_moment=(sys.argv[10] == "True"),
+            cm_ref=None if sys.argv[11] == "None" else float(sys.argv[11]),
+            seed=None if sys.argv[12] == "None" else int(sys.argv[12]),
+            repr_file=sys.argv[13],
+            dat_file=sys.argv[14],
+            png_file=sys.argv[15],
         )
     else:
         main(1.0, 3, 3, constrain_moment=False, gen=9)

@@ -20,19 +20,6 @@ const AddRun = (props) => {
             />
           </div>
           <div className="column">
-            GA Generations:
-            <input
-              name="gen"
-              className="input"
-              type="number"
-              min="0"
-              step="1"
-              required
-              value={props.gen}
-              onChange={props.handleChange}
-            />
-          </div>
-          <div className="column">
             Fix the TE Thickness?<br/>
             <input
               name="fix_te"
@@ -82,7 +69,8 @@ const AddRun = (props) => {
               name="n_c"
               className="input"
               type="number"
-              step="0.01"
+              min="0"
+              step="1"
               required
               value={props.n_c}
               onChange={props.handleChange}
@@ -94,9 +82,53 @@ const AddRun = (props) => {
               name="n_t"
               className="input"
               type="number"
-              step="0.01"
+              min="0"
+              step="1"
               required
               value={props.n_t}
+              onChange={props.handleChange}
+            />
+          </div>
+        </div>
+        <i className="italic">It is recommended to use between 3 and 6 coefficients for each variable.</i>
+      </div>
+      <div className="box">
+        <h6 className="title is-6">Termination Settings</h6>
+        <div className="columns">
+          <div className="column">
+            Number of Generations
+            <input
+              name="gen"
+              className="input"
+              type="number"
+              min="0"
+              step="1"
+              required
+              value={props.gen}
+              onChange={props.handleChange}
+            />
+          </div>
+          <div className="column">
+            Design Vector Tolerance
+            <input
+              name="tolx"
+              className="input"
+              type="number"
+              step="0.00000000001"
+              required
+              value={props.tolx}
+              onChange={props.handleChange}
+            />
+          </div>
+          <div className="column">
+            Objective Function Tolerance
+            <input
+              name="tolf"
+              className="input"
+              type="number"
+              step="0.000000000001"
+              required
+              value={props.tolf}
               onChange={props.handleChange}
             />
           </div>
