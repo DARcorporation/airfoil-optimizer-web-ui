@@ -34,8 +34,6 @@ class TestRunsService(BaseTestCase):
                         "cl": 1.0,
                         "n_c": 3,
                         "n_t": 3,
-                        "b_c": 8,
-                        "b_t": 8,
                         "gen": 100,
                         "constrain_moment": False,
                         "report": False,
@@ -105,7 +103,7 @@ class TestRunsService(BaseTestCase):
     def test_all_runs(self):
         """Ensure get all runs behaves correctly."""
         add_run(1.0, 3, 3)
-        add_run(0.5, 6, 6, 16, 16)
+        add_run(0.5, 6, 6)
         with self.client:
             response = self.client.get("/runs")
             data = json.loads(response.data.decode())
@@ -119,8 +117,6 @@ class TestRunsService(BaseTestCase):
             self.assertEqual(0.5, data["data"]["runs"][1]["cl"])
             self.assertEqual(6, data["data"]["runs"][1]["n_c"])
             self.assertEqual(6, data["data"]["runs"][1]["n_t"])
-            self.assertEqual(16, data["data"]["runs"][1]["b_c"])
-            self.assertEqual(16, data["data"]["runs"][1]["b_t"])
 
             self.assertIn("success", data["status"])
 

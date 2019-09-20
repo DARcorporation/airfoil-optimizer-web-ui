@@ -602,9 +602,6 @@ def main(
     cl,
     n_c,
     n_t,
-    b_c=8,
-    b_t=8,
-    b_te=8,
     gen=100,
     fix_te=True,
     constrain_thickness=True,
@@ -625,9 +622,6 @@ def main(
         Design lift coefficient
     n_c, n_t : int
         Number of CST coefficients for the chord line and thickness distribution, respectively
-    b_c, b_t, b_te : int, optional
-        Number of bits to encode each of the CST coefficients of the chord line/thickness distribution, and TE thickness
-        8 bits each by default.
     gen : int, optional
         Number of generations to use for the genetic algorithm. 100 by default
     fix_te : bool, optional
@@ -713,24 +707,21 @@ def main(
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 17:
+    if len(sys.argv) == 14:
         main(
             cl=float(sys.argv[1]),
             n_c=int(sys.argv[2]),
             n_t=int(sys.argv[3]),
-            b_c=int(sys.argv[4]),
-            b_t=int(sys.argv[5]),
-            b_te=int(sys.argv[6]),
-            gen=int(sys.argv[7]),
-            fix_te=(sys.argv[8] == "True"),
-            constrain_thickness=(sys.argv[9] == "True"),
-            constrain_area=(sys.argv[10] == "True"),
-            constrain_moment=(sys.argv[11] == "True"),
-            cm_ref=None if sys.argv[12] == "None" else float(sys.argv[12]),
-            seed=None if sys.argv[13] == "None" else int(sys.argv[13]),
-            repr_file=sys.argv[14],
-            dat_file=sys.argv[15],
-            png_file=sys.argv[16],
+            gen=int(sys.argv[4]),
+            fix_te=(sys.argv[5] == "True"),
+            constrain_thickness=(sys.argv[6] == "True"),
+            constrain_area=(sys.argv[7] == "True"),
+            constrain_moment=(sys.argv[8] == "True"),
+            cm_ref=None if sys.argv[9] == "None" else float(sys.argv[9]),
+            seed=None if sys.argv[10] == "None" else int(sys.argv[10]),
+            repr_file=sys.argv[11],
+            dat_file=sys.argv[12],
+            png_file=sys.argv[13],
         )
     else:
         main(1.0, 3, 3, constrain_moment=False, gen=9)

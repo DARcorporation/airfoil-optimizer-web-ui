@@ -14,9 +14,6 @@ class App extends Component {
       n_c: 3,
       n_t: 3,
       fix_te: true,
-      b_c: 8,
-      b_t: 8,
-      b_te: 8,
       gen: 0,
       constrain_thickness: true,
       constrain_area: true,
@@ -44,9 +41,6 @@ class App extends Component {
       n_c: this.state.n_c,
       n_t: this.state.n_t,
       fix_te: this.fix_te,
-      b_c: this.state.b_c,
-      b_t: this.state.b_t,
-      b_te: this.state.b_te,
       gen: this.state.gen,
       constrain_thickness: this.state.constrain_thickness,
       constrain_area: this.state.constrain_area,
@@ -88,9 +82,6 @@ class App extends Component {
                 n_c={this.state.n_c}
                 n_t={this.state.n_t}
                 fix_te={this.state.fix_te}
-                b_c={this.state.b_c}
-                b_t={this.state.b_t}
-                b_te={this.state.b_te}
                 gen={this.state.gen}
                 constrain_thickness={this.state.constrain_thickness}
                 constrain_area={this.state.constrain_area}

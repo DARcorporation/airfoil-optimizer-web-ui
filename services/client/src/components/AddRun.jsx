@@ -104,53 +104,6 @@ const AddRun = (props) => {
         <i className="italic">It is recommended to use between 3 and 6 coefficients for each variable.</i>
       </div>
       <div className="box">
-        <h6 className="title is-6">Encoding of the Design Variables</h6>
-        <div className="columns">
-          <div className="column">
-            Chord Line
-            <input
-              name="b_c"
-              className="input"
-              type="number"
-              min="1"
-              step="1"
-              required
-              value={props.b_c}
-              onChange={props.handleChange}
-            />
-          </div>
-          <div className="column">
-            Thickness Distribution
-            <input
-              name="b_t"
-              className="input"
-              type="number"
-              min="1"
-              step="1"
-              required
-              value={props.b_t}
-              onChange={props.handleChange}
-            />
-          </div>
-          {!props.fix_te &&
-          <div className="column">
-            TE Thickness
-            <input
-              name="b_te"
-              className="input"
-              type="number"
-              min="1"
-              step="1"
-              required
-              value={props.b_te}
-              onChange={props.handleChange}
-            />
-          </div>
-          }
-        </div>
-        <i className="italic">Specify the number of bits used to encode each CST variable</i>
-      </div>
-      <div className="box">
         <h6 className="title is-6">Miscellaneous Settings</h6>
         <div className="columns">
           <div className="column">

@@ -2,84 +2,177 @@
 
 exports[`AddRun renders a snapshot properly 1`] = `
 <form
+  className="box"
   onSubmit={[Function]}
 >
-  <div
-    className="field"
+  <h2
+    className="title is-2"
   >
-    <input
-      className="input is-large"
-      name="cl"
-      placeholder="Enter the design lift coefficient"
-      required={true}
-      type="number"
-    />
+    Add a New Run
+  </h2>
+  <div
+    className="box"
+  >
+    <h6
+      className="title is-6"
+    >
+      Basic Problem Setup
+    </h6>
+    <div
+      className="columns"
+    >
+      <div
+        className="column"
+      >
+        Design Lift Coefficient:
+        <br />
+        <input
+          className="input"
+          name="cl"
+          required={true}
+          step="0.01"
+          type="number"
+        />
+      </div>
+      <div
+        className="column"
+      >
+        GA Generations:
+        <input
+          className="input"
+          min="0"
+          name="gen"
+          required={true}
+          step="1"
+          type="number"
+        />
+      </div>
+      <div
+        className="column"
+      >
+        Fix the TE Thickness?
+        <br />
+        <input
+          className=""
+          name="fix_te"
+          type="checkbox"
+        />
+      </div>
+    </div>
+    <div
+      className="columns"
+    >
+      <div
+        className="column"
+      >
+        Constrain the t/c?
+        <br />
+        <input
+          name="constrain_thickness"
+          type="checkbox"
+        />
+      </div>
+      <div
+        className="column"
+      >
+        Constrain the area
+        <br />
+        <input
+          name="constrain_area"
+          type="checkbox"
+        />
+      </div>
+      <div
+        className="column"
+      >
+        Constrain the moment?
+        <br />
+        <input
+          name="constrain_area"
+          type="checkbox"
+        />
+      </div>
+    </div>
   </div>
   <div
-    className="field"
+    className="box"
   >
-    <input
-      className="input is-large"
-      name="n_c"
-      placeholder="Enter the number of CST coefficients for the chord line"
-      required={true}
-      type="number"
-    />
+    <h6
+      className="title is-6"
+    >
+      Numbers of Design Variables
+    </h6>
+    <div
+      className="columns"
+    >
+      <div
+        className="column"
+      >
+        Chord Line
+        <input
+          className="input"
+          name="n_c"
+          required={true}
+          step="0.01"
+          type="number"
+        />
+      </div>
+      <div
+        className="column"
+      >
+        Thickness Distribution
+        <input
+          className="input"
+          name="n_t"
+          required={true}
+          step="0.01"
+          type="number"
+        />
+      </div>
+    </div>
+    <i
+      className="italic"
+    >
+      It is recommended to use between 3 and 6 coefficients for each variable.
+    </i>
   </div>
   <div
-    className="field"
+    className="box"
   >
-    <input
-      className="input is-large"
-      name="n_t"
-      placeholder="Enter the number of CST coefficients for the thickness distribution"
-      required={true}
-      type="number"
-    />
-  </div>
-  <div
-    className="field"
-  >
-    <input
-      className="input is-large"
-      name="b_c"
-      placeholder="Enter the number of bits per chord line CST coefficient"
-      required={true}
-      type="number"
-    />
-  </div>
-  <div
-    className="field"
-  >
-    <input
-      className="input is-large"
-      name="b_t"
-      placeholder="Enter the number of bits per thickness CST coefficient"
-      required={true}
-      type="number"
-    />
-  </div>
-  <div
-    className="field"
-  >
-    <input
-      className="input is-large"
-      name="b_te"
-      placeholder="Enter the number of bits for the TE thickness"
-      required={true}
-      type="number"
-    />
-  </div>
-  <div
-    className="field"
-  >
-    <input
-      className="input is-large"
-      name="gen"
-      placeholder="Enter the number of generations for the genetic algorithm"
-      required={true}
-      type="number"
-    />
+    <h6
+      className="title is-6"
+    >
+      Miscellaneous Settings
+    </h6>
+    <div
+      className="columns"
+    >
+      <div
+        className="column"
+      >
+        Number of Processors:
+        <br />
+        <input
+          className="input"
+          min="1"
+          name="n_proc"
+          required={true}
+          step="1"
+          type="number"
+        />
+      </div>
+      <div
+        className="column"
+      >
+        Report Result via Email?
+        <br />
+        <input
+          className=""
+          name="report"
+          type="checkbox"
+        />
+      </div>
+    </div>
   </div>
   <input
     className="button is-primary is-large is-fullwidth"

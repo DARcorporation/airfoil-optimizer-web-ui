@@ -2,39 +2,30 @@
 
 exports[`RunsList renders a snapshot properly 1`] = `
 <div>
+  <h2
+    className="title is-2"
+  >
+    Submitted Runs:
+  </h2>
   <h4
     className="box title is-4"
+    style={
+      Object {
+        "backgroundColor": "red",
+      }
+    }
   >
-    1
-    , 
-    3
-    , 
-    3
-    , 
-    8
-    , 
-    8
-    , 
-    8
-    , 
-    100
+    Failed
   </h4>
   <h4
     className="box title is-4"
+    style={
+      Object {
+        "backgroundColor": "red",
+      }
+    }
   >
-    0.5
-    , 
-    6
-    , 
-    6
-    , 
-    16
-    , 
-    16
-    , 
-    16
-    , 
-    300
+    Failed
   </h4>
 </div>
 `;

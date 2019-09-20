@@ -20,9 +20,6 @@ def run(
     cl,
     n_c,
     n_t,
-    b_c=8,
-    b_t=8,
-    b_te=8,
     gen=100,
     fix_te=True,
     constrain_thickness=True,
@@ -43,9 +40,6 @@ def run(
         Design lift coefficient
     n_c, n_t : int
         Number of CST coefficients for the chord line and thickness distribution, respectively
-    b_c, b_t, b_te : int, optional
-        Number of bits to encode each of the CST coefficients of the chord line/thickness distribution, and TE thickness
-        8 bits each by default.
     gen : int, optional
         Number of generations to use for the genetic algorithm. 100 by default
     fix_te : bool, optional
@@ -90,9 +84,6 @@ def run(
             str(cl),
             str(n_c),
             str(n_t),
-            str(b_c),
-            str(b_t),
-            str(b_te),
             str(gen),
             str(fix_te),
             str(constrain_thickness),

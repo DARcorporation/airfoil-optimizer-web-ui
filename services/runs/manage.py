@@ -28,7 +28,7 @@ def recreate_db():
 def seed_db():
     """Seeds the database"""
     db.session.add(Run(cl=1.0, n_c=3, n_t=3))
-    db.session.add(Run(cl=0.5, n_c=6, n_t=6, b_c=16, b_t=16, gen=300))
+    db.session.add(Run(cl=0.5, n_c=6, n_t=6, gen=300))
     db.session.commit()
 
 
