@@ -5,30 +5,32 @@ import Collapsible from 'react-collapsible';
 import AddRun from "./components/AddRun";
 import RunsList from "./components/RunsList";
 
+const MyCollapsible = (props) => {
+  return (
+    <Collapsible
+      className="box"
+      openedClassName="box"
+      triggerClassName="title is-2"
+      triggerOpenedClassName="title is-2"
+      contentInnerClassName="box"
+      trigger={props.title}>
+      {props.children}
+    </Collapsible>
+  )
+};
+
 const App = (props) => {
   return (
     <section className="section">
       <div className="container">
         <div className="columns">
           <div className="column is-two-thirds">
-            <Collapsible
-              className="box"
-              openedClassName="box"
-              triggerClassName="title is-2"
-              triggerOpenedClassName="title is-2"
-              contentInnerClassName="box"
-              trigger="Add New Run">
+            <MyCollapsible title="Add New Run">
               <AddRun/>
-            </Collapsible>
-            <Collapsible
-              className="box"
-              openedClassName="box"
-              triggerClassName="title is-2"
-              triggerOpenedClassName="title is-2"
-              contentInnerClassName="box"
-              trigger="Run List">
+            </MyCollapsible>
+            <MyCollapsible title="Run List">
               <RunsList/>
-            </Collapsible>
+            </MyCollapsible>
           </div>
         </div>
       </div>
