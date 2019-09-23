@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import axios from "axios";
+import MyCollapsible from "./MyCollapsible";
 
 const input_style = {
   invalid: {
@@ -31,6 +32,7 @@ class AddRun extends Component {
     this.collapseHandle = this.collapseHandle.bind(this);
     this.addRun = this.addRun.bind(this);
     this.handleChange = this.handleChange.bind(this);
+    this.radioHelper = this.radioHelper.bind(this);
   }
 
   collapseHandle(event) {
@@ -63,176 +65,354 @@ class AddRun extends Component {
   handleChange(event) {
     const obj = {};
     if (['fix_te', 'constrain_thickness', 'constrain_area', 'constrain_moment', 'report'].includes(event.target.name)) {
-      obj[event.target.name] = event.target.checked;
+      obj[event.target.name] = (event.target.value === 'true')
     } else {
       obj[event.target.name] = event.target.value;
     }
     this.setState(obj);
   };
 
+  radioHelper(event) {
+    this.handleChange(event);
+  }
+
+
   render() {
     return (
       <form onSubmit={(event) => this.addRun(event)}>
-        <div className="box">
-          <h6 className="title is-6">Basic Problem Setup</h6>
+
+        <MyCollapsible titleClassName="title is-4" title="Basic Problem Setup">
           <div className="columns">
-            <div className="column">
-              Design Lift Coefficient:<br/>
-              <input
-                name="cl"
-                className="input"
-                type="number"
-                step="0.01"
-                required
-                value={this.state.cl}
-                onChange={this.handleChange}
-              />
+            <div className="field column">
+              <label className="label">Design Lift Coefficient</label>
+              <div className="control">
+                <input
+                  name="cl"
+                  className="input"
+                  type="number"
+                  step="0.01"
+                  required
+                  value={this.state.cl}
+                  onChange={this.handleChange}
+                />
+              </div>
             </div>
-            <div className="column">
-              Fix the TE Thickness?<br/>
-              <input
-                name="fix_te"
-                className=""
-                type="checkbox"
-                checked={this.state.fix_te}
-                onChange={this.handleChange}
-              />
-            </div>
+            <div className="column"/>
           </div>
+
           <div className="columns">
-            <div className="column">
-              Constrain the t/c?<br/>
-              <input
-                name="constrain_thickness"
-                type="checkbox"
-                checked={this.state.constrain_thickness}
-                onChange={this.state.handleChange}
-              />
-            </div>
-            <div className="column">
-              Constrain the area<br/>
-              <input
-                name="constrain_area"
-                type="checkbox"
-                checked={this.state.constrain_area}
-                onChange={this.handleChange}
-              />
-            </div>
-            <div className="column">
-              Constrain the moment?<br/>
-              <input
-                name="constrain_moment"
-                type="checkbox"
-                checked={this.state.constrain_moment}
-                onChange={this.handleChange}
-              />
-            </div>
-          </div>
-        </div>
-        <div className="box">
-          <h6 className="title is-6">Numbers of Design Variables</h6>
-          <div className="columns">
-            <div className="column">
-              Chord Line
-              <input
-                name="n_c"
-                className="input"
-                type="number"
-                min="0"
-                step="1"
-                required
-                value={this.state.n_c}
-                onChange={this.handleChange}
-              />
-            </div>
-            <div className="column">
-              Thickness Distribution
-              <input
-                name="n_t"
-                className="input"
-                type="number"
-                min="0"
-                step="1"
-                required
-                value={this.state.n_t}
-                onChange={this.handleChange}
-              />
-            </div>
-          </div>
-          <i className="italic">It is recommended to use between 3 and 6 coefficients for each variable.</i>
-        </div>
-        <div className="box">
-          <h6 className="title is-6">Termination Settings</h6>
-          <div className="columns">
-            <div className="column">
-              Number of Generations
-              <input
-                name="gen"
-                className="input"
-                type="number"
-                min="0"
-                step="1"
-                required
-                value={this.state.gen}
-                onChange={this.handleChange}
-              />
-            </div>
-            <div className="column">
-              Design Vector Tolerance
-              <input
-                name="tolx"
-                className="input"
-                type="text"
-                pattern="[+-]?([1-9]\d*|0)?(\.\d*)?([Ee][+-]?\d+)?"
-                required
-                style={input_style}
-                value={this.state.tolx}
-                onChange={this.handleChange}
-              />
-            </div>
-            <div className="column">
-              Objective Function Tolerance
-              <input
-                name="tolf"
-                className="input"
-                type="text"
-                pattern="[+-]?([1-9]\d*|0)?(\.\d*)?([Ee][+-]?\d+)?"
-                required
-                value={this.state.tolf}
-                onChange={this.handleChange}
-              />
-            </div>
-          </div>
-        </div>
-        <div className="box">
-          <h6 className="title is-6">Miscellaneous Settings</h6>
-          <div className="columns">
-            <div className="column">
-              Number of Processors:<br/>
-              <input
-                name="n_proc"
-                className="input"
-                type="number"
-                step="1"
-                min="1"
-                required
-                value={this.state.n_proc}
-                onChange={this.handleChange}
-              />
+            <div className="field column">
+              <label className="label">Fix TE Thickness?</label>
+              <div className="field">
+                <input className="is-checkradio"
+                       type="radio"
+                       name="fix_te"
+                       value={true}
+                       checked={this.state.fix_te}
+                       onChange={this.handleChange}
+                />
+                <label
+                  className="radio"
+                  onClick={(event) => this.radioHelper(
+                    {
+                      target: {
+                        name: "fix_te",
+                        value: "true",
+                      }
+                    })}
+                >Yes</label>
+                <input className="is-checkradio"
+                       type="radio"
+                       name="fix_te"
+                       value={false}
+                       checked={!this.state.fix_te}
+                       onChange={this.handleChange}
+                />
+                <label
+                  className="radio"
+                  onClick={(event) => this.radioHelper(
+                    {
+                      target: {
+                        name: "fix_te",
+                        value: "false",
+                      }
+                    })}
+                >No</label>
+              </div>
             </div>
 
-            <div className="column">
-              Report Result via Email?<br/>
-              <input
-                name="report"
-                className=""
-                type="checkbox"
-                checked={this.state.report}
-                onChange={this.handleChange}
-              />
+            <div className="field column">
+              <label className="label">Constrain Thickness?</label>
+              <div className="control">
+                <input className="is-checkradio"
+                       type="radio"
+                       name="constrain_thickness"
+                       value={true}
+                       checked={this.state.constrain_thickness}
+                       onChange={this.handleChange}
+                />
+                <label
+                  className="radio"
+                  onClick={(event) => this.radioHelper(
+                    {
+                      target: {
+                        name: "constrain_thickness",
+                        value: "true",
+                      }
+                    })}
+                >Yes</label>
+                <input className="is-checkradio"
+                       type="radio"
+                       name="constrain_thickness"
+                       value={false}
+                       checked={!this.state.constrain_thickness}
+                       onChange={this.handleChange}
+                />
+                <label
+                  className="radio"
+                  onClick={(event) => this.radioHelper(
+                    {
+                      target: {
+                        name: "constrain_thickness",
+                        value: "false",
+                      }
+                    })}
+                >No</label>
+              </div>
             </div>
           </div>
-        </div>
+
+          <div className="columns">
+            <div className="field column">
+              <label className="label">Constrain Area?</label>
+              <div className="control">
+                <input className="is-checkradio"
+                       type="radio"
+                       name="constrain_area"
+                       value={true}
+                       checked={this.state.constrain_area}
+                       onChange={this.handleChange}
+                />
+                <label
+                  className="radio"
+                  onClick={(event) => this.radioHelper(
+                    {
+                      target: {
+                        name: "constrain_area",
+                        value: "true",
+                      }
+                    })}
+                >No</label>
+                <input className="is-checkradio"
+                       type="radio"
+                       name="constrain_area"
+                       value={false}
+                       checked={!this.state.constrain_area}
+                       onChange={this.handleChange}
+                />
+                <label
+                  className="radio"
+                  onClick={(event) => this.radioHelper(
+                    {
+                      target: {
+                        name: "constrain_area",
+                        value: "false",
+                      }
+                    })}
+                >No</label>
+              </div>
+            </div>
+
+            <div className="field column">
+              <label className="label">Constrain Moment?</label>
+              <div className="control">
+                <input className="is-checkradio"
+                       type="radio"
+                       name="constrain_moment"
+                       value={true}
+                       checked={this.state.constrain_moment}
+                       onChange={this.handleChange}
+                />
+                <label
+                  className="radio"
+                  onClick={(event) => this.radioHelper(
+                    {
+                      target: {
+                        name: "constrain_moment",
+                        value: "true",
+                      }
+                    })}
+                >Yes</label>
+                <input className="is-checkradio"
+                       type="radio"
+                       name="constrain_moment"
+                       value={false}
+                       checked={!this.state.constrain_moment}
+                       onChange={this.handleChange}
+                />
+                <label
+                  className="radio"
+                  onClick={(event) => this.radioHelper(
+                    {
+                      target: {
+                        name: "constrain_moment",
+                        value: "false",
+                      }
+                    })}
+                >No</label>
+              </div>
+            </div>
+          </div>
+        </MyCollapsible>
+
+        <MyCollapsible titleClassName="title is-4" title="Number of Design Variables">
+          <div className="columns">
+            <div className="field column">
+              <label className="label">Chord Line</label>
+              <div className="control">
+                <input
+                  name="n_c"
+                  className="input"
+                  type="number"
+                  min="0"
+                  step="1"
+                  required
+                  value={this.state.n_c}
+                  onChange={this.handleChange}
+                />
+              </div>
+            </div>
+
+            <div className="field column">
+              <label className="label">Thickness Distribution</label>
+              <div className="control">
+                <input
+                  name="n_t"
+                  className="input"
+                  type="number"
+                  min="0"
+                  step="1"
+                  required
+                  value={this.state.n_t}
+                  onChange={this.handleChange}
+                />
+              </div>
+            </div>
+          </div>
+          <i className="italic">It is recommended to use between 3 and 6 for each.</i>
+        </MyCollapsible>
+
+        <MyCollapsible titleClassName="title is-4" title="Termination Settings">
+          <div className="columns">
+            <div className="field column">
+              <label className="label">Number of Generations</label>
+              <div className="control">
+                <input
+                  name="gen"
+                  className="input"
+                  type="number"
+                  min="0"
+                  step="1"
+                  required
+                  value={this.state.gen}
+                  onChange={this.handleChange}
+                />
+              </div>
+            </div>
+            <div className="column"/>
+          </div>
+          <div className="columns">
+            <div className="field column">
+              <label className="label">Design Vector Tolerance</label>
+              <div className="control">
+                <input
+                  name="tolx"
+                  className="input"
+                  type="text"
+                  pattern="[+-]?([1-9]\d*|0)?(\.\d*)?([Ee][+-]?\d+)?"
+                  required
+                  style={input_style}
+                  value={this.state.tolx}
+                  onChange={this.handleChange}
+                />
+              </div>
+            </div>
+            <div className="field column">
+              <label className="label">Objective Function Tolerance</label>
+              <div className="control">
+                <input
+                  name="tolf"
+                  className="input"
+                  type="text"
+                  pattern="[+-]?([1-9]\d*|0)?(\.\d*)?([Ee][+-]?\d+)?"
+                  required
+                  value={this.state.tolf}
+                  onChange={this.handleChange}
+                />
+              </div>
+            </div>
+          </div>
+        </MyCollapsible>
+
+        <MyCollapsible titleClassName="title is-4" title="Miscellaneous Settings">
+          <div className="columns">
+            <div className="field column">
+              <label className="label">Number of Processors</label>
+              <div className="control">
+                <input
+                  name="n_proc"
+                  className="input"
+                  type="number"
+                  step="1"
+                  min="1"
+                  required
+                  value={this.state.n_proc}
+                  onChange={this.handleChange}
+                />
+              </div>
+            </div>
+
+            <div className="field column">
+              <label className="label">Report Result via Email?</label>
+              <div className="control">
+                <input className="is-checkradio"
+                       type="radio"
+                       name="report"
+                       value={true}
+                       checked={this.state.report}
+                       onChange={this.handleChange}
+                />
+                <label
+                  className="radio"
+                  onClick={(event) => this.radioHelper(
+                    {
+                      target: {
+                        name: "report",
+                        value: "true",
+                      }
+                    })}
+                >Yes</label>
+                <input className="is-checkradio"
+                       type="radio"
+                       name="report"
+                       value={false}
+                       checked={!this.state.report}
+                       onChange={this.handleChange}
+                />
+                <label
+                  className="radio"
+                  onClick={(event) => this.radioHelper(
+                    {
+                      target: {
+                        name: "report",
+                        value: "false",
+                      }
+                    })}
+                >No</label>
+              </div>
+            </div>
+          </div>
+        </MyCollapsible>
         <input
           type="submit"
           className="button is-primary is-large is-fullwidth"

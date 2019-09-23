@@ -1,23 +1,11 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import Collapsible from 'react-collapsible';
+import "./index.scss"
 
 import AddRun from "./components/AddRun";
 import RunsList from "./components/RunsList";
+import MyCollapsible from "./components/MyCollapsible";
 
-const MyCollapsible = (props) => {
-  return (
-    <Collapsible
-      className="box"
-      openedClassName="box"
-      triggerClassName="title is-2"
-      triggerOpenedClassName="title is-2"
-      contentInnerClassName="box"
-      trigger={props.title}>
-      {props.children}
-    </Collapsible>
-  )
-};
 
 const App = (props) => {
   return (
@@ -25,10 +13,10 @@ const App = (props) => {
       <div className="container">
         <div className="columns">
           <div className="column is-two-thirds">
-            <MyCollapsible title="Add New Run">
+            <MyCollapsible titleClassName="title is-2" title="Add New Run">
               <AddRun/>
             </MyCollapsible>
-            <MyCollapsible title="Run List">
+            <MyCollapsible titleClassName="title is-2" title="Run List">
               <RunsList/>
             </MyCollapsible>
           </div>
