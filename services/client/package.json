@@ -5,6 +5,7 @@
   "dependencies": {
     "axios": "^0.18.1",
     "react": "^16.9.0",
+    "react-collapsible": "^2.6.0",
     "react-dom": "^16.9.0",
     "react-scripts": "3.1.1"
   },
