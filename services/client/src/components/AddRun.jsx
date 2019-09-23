@@ -202,7 +202,7 @@ class AddRun extends Component {
                         value: "true",
                       }
                     })}
-                >No</label>
+                >Yes</label>
                 <input className="is-checkradio"
                        type="radio"
                        name="constrain_area"
