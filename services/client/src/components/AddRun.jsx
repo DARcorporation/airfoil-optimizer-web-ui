@@ -12,17 +12,17 @@ class AddRun extends Component {
   constructor(props) {
     super(props);
     this.default_state = {
-      cl: 0.0,
+      cl: 1.0,
       n_c: 3,
       n_t: 3,
       fix_te: true,
-      gen: 0,
+      gen: 1000,
       tolx: 1e-8,
       tolf: 1e-8,
       constrain_thickness: true,
       constrain_area: true,
       constrain_moment: false,
-      n_proc: 1,
+      n_proc: 28,
       report: false,
     };
     this.state = {
@@ -45,7 +45,7 @@ class AddRun extends Component {
       cl: this.state.cl,
       n_c: this.state.n_c,
       n_t: this.state.n_t,
-      fix_te: this.fix_te,
+      fix_te: this.state.fix_te,
       gen: this.state.gen,
       tolx: this.state.tolx,
       tolf: this.state.tolf,
