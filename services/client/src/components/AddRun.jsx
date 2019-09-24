@@ -1,426 +1,326 @@
-import React, { Component } from 'react';
+import React from 'react';
 import axios from "axios";
-import MyCollapsible from "./MyCollapsible";
 
-const input_style = {
-  invalid: {
-    border: '1px solid red'
-  }
-};
+import { makeStyles } from '@material-ui/core/styles';
+import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
+import {
+  Button,
+  ButtonGroup,
+  Container,
+  Dialog, DialogTitle,
+  ExpansionPanel,
+  ExpansionPanelDetails,
+  ExpansionPanelSummary,
+  FormControlLabel,
+  Switch,
+  TextField,
+  Typography
+} from "@material-ui/core";
 
-class AddRun extends Component {
-  constructor(props) {
-    super(props);
-    this.default_state = {
-      cl: 1.0,
-      n_c: 3,
-      n_t: 3,
-      fix_te: true,
-      gen: 1000,
-      tolx: 1e-8,
-      tolf: 1e-8,
-      constrain_thickness: true,
-      constrain_area: true,
-      constrain_moment: false,
-      n_proc: 28,
-      report: false,
-    };
-    this.state = {
-      ...this.default_state,
-      collapsed: true,
-    };
-    this.collapseHandle = this.collapseHandle.bind(this);
-    this.addRun = this.addRun.bind(this);
-    this.handleChange = this.handleChange.bind(this);
-    this.radioHelper = this.radioHelper.bind(this);
-  }
+const useStyles = makeStyles(theme => ({
+  dialog: {
+    padding: theme.spacing(2),
+    textAlign: 'center',
+    color: theme.palette.text.secondary,
+  },
+  textField: {
+    marginLeft: theme.spacing(1),
+    marginRight: theme.spacing(1),
+  },
+  button: {
+    marginTop: theme.spacing(1),
+  },
+  heading: {
+    fontSize: theme.typography.pxToRem(15),
+    fontWeight: theme.typography.fontWeightRegular,
+  },
+}));
 
-  collapseHandle(event) {
-    this.setState({collapsed: !this.state.collapsed});
-  }
+export default function AddRun(props) {
+  const classes = useStyles();
+  const { onClose, open } = props;
+  const [values, setValues] = React.useState({
+    cl: 1.0,
+    n_c: 3,
+    n_t: 3,
+    fix_te: true,
+    gen: 1000,
+    tolx: 1e-8,
+    tolf: 1e-8,
+    constrain_thickness: true,
+    constrain_area: true,
+    constrain_moment: false,
+    n_proc: 28,
+    report: false,
+  });
 
-  addRun(event) {
+  const handleChange = name => event => {
+    setValues({ ...values, [name]: event.target.value });
+  };
+
+  const handleClose = () => {
+    onClose();
+  };
+
+  const addRun = event => {
     event.preventDefault();
     const data = {
-      cl: this.state.cl,
-      n_c: this.state.n_c,
-      n_t: this.state.n_t,
-      fix_te: this.state.fix_te,
-      gen: this.state.gen,
-      tolx: this.state.tolx,
-      tolf: this.state.tolf,
-      constrain_thickness: this.state.constrain_thickness,
-      constrain_area: this.state.constrain_area,
-      constrain_moment: this.state.constrain_moment,
-      n_proc: this.state.n_proc,
-      report: this.state.report,
+      cl: values.cl,
+      n_c: values.n_c,
+      n_t: values.n_t,
+      fix_te: values.fix_te,
+      gen: values.gen,
+      tolx: values.tolx,
+      tolf: values.tolf,
+      constrain_thickness: values.constrain_thickness,
+      constrain_area: values.constrain_area,
+      constrain_moment: values.constrain_moment,
+      n_proc: values.n_proc,
+      report: values.report,
     };
     axios.post(`${process.env.REACT_APP_RUNS_SERVICE_URL}/runs`, data)
       .then((res) => {
 
       })
       .catch((err) => { console.log(err); });
+    onClose();
   };
 
-  handleChange(event) {
-    const obj = {};
-    if (['fix_te', 'constrain_thickness', 'constrain_area', 'constrain_moment', 'report'].includes(event.target.name)) {
-      obj[event.target.name] = (event.target.value === 'true')
-    } else {
-      obj[event.target.name] = event.target.value;
-    }
-    this.setState(obj);
-  };
+  return (
+    <Dialog
+      className={classes.dialog}
+      open={open}
+    >
+      <DialogTitle>Submit New Run</DialogTitle>
+      <form onSubmit={(event) => addRun(event)}>
+        <ExpansionPanel>
+          <ExpansionPanelSummary
+            expandIcon={<ExpandMoreIcon />}
+            aria-controls="panel1a-content"
+            id="panel1a-header"
+          >
+            <Typography className={classes.heading}>Basic Problem Setup</Typography>
+          </ExpansionPanelSummary>
+          <ExpansionPanelDetails>
+            <Container maxWidth="xs">
+              <TextField
+                label="Design Lift Coefficient"
+                name="cl"
+                value={values.cl}
+                onChange={handleChange('cl')}
+                type="number"
+                inputProps={{
+                  step: 0.001,
+                }}
+                className={classes.textField}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+                margin="normal"
+              />
+              <br/>
+              <FormControlLabel control={
+                <Switch
+                  checked={values.fix_te}
+                  onChange={handleChange('fix_te')}
+                  value="fix_te"
+                  name="fix_te"
+                  inputProps={{ 'aria-label': 'primary checkbox' }}
+                />} label="Fix TE Thickness?" //labelPlacement="top"
+              />
+              <br/>
+              <FormControlLabel control={
+                <Switch
+                  checked={values.constrain_thickness}
+                  onChange={handleChange('constrain_thickness')}
+                  name="constrain_thickness"
+                  inputProps={{ 'aria-label': 'primary checkbox' }}
+                />} label="Constrain Thickness?" //labelPlacement="top"
+              />
+              <br/>
+              <FormControlLabel control={
+                <Switch
+                  checked={values.constrain_area}
+                  onChange={handleChange('constrain_area')}
+                  name="constrain_area"
+                  inputProps={{ 'aria-label': 'primary checkbox' }}
+                />} label="Constrain Area?" //labelPlacement="top"
+              />
+              <br/>
+              <FormControlLabel control={
+                <Switch
+                  checked={values.constrain_moment}
+                  onChange={handleChange('constrain_moment')}
+                  name="constrain_moment"
+                  inputProps={{ 'aria-label': 'primary checkbox' }}
+                />} label="Constrain Moment?" //labelPlacement="top"
+              />
+            </Container>
+          </ExpansionPanelDetails>
+        </ExpansionPanel>
 
-  radioHelper(event) {
-    this.handleChange(event);
-  }
+        <ExpansionPanel>
+          <ExpansionPanelSummary
+            expandIcon={<ExpandMoreIcon />}
+            aria-controls="panel1a-content"
+            id="panel1a-header"
+          >
+            <Typography className={classes.heading}>Number of Design Variables</Typography>
+          </ExpansionPanelSummary>
+          <ExpansionPanelDetails>
+            <Container maxWidth="xs">
+              <TextField
+                label="Mean Chord Line"
+                name="n_c"
+                value={values.n_c}
+                onChange={handleChange('n_c')}
+                type="number"
+                inputProps={{
+                  min: 1,
+                }}
+                className={classes.textField}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+                margin="normal"
+              />
+              <br/>
+              <TextField
+                label="Thickness Distribution"
+                name="n_t"
+                value={values.n_t}
+                onChange={handleChange('n_t')}
+                type="number"
+                inputProps={{
+                  min: 1,
+                }}
+                className={classes.textField}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+                margin="normal"
+              />
+              <br/>
+              <Typography component="i">
+                It is recommended to use between 3 and 6 for each.
+              </Typography>
+            </Container>
+          </ExpansionPanelDetails>
+        </ExpansionPanel>
 
+        <ExpansionPanel>
+          <ExpansionPanelSummary
+            expandIcon={<ExpandMoreIcon />}
+            aria-controls="panel1a-content"
+            id="panel1a-header"
+          >
+            <Typography className={classes.heading}>Termination Settings</Typography>
+          </ExpansionPanelSummary>
+          <ExpansionPanelDetails>
+            <Container maxWidth="xs">
+              <TextField
+                label="Number of Generations"
+                name="gen"
+                value={values.gen}
+                onChange={handleChange('gen')}
+                type="number"
+                inputProps={{
+                  min: 0,
+                }}
+                className={classes.textField}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+                margin="normal"
+              />
+              <br/>
+              <TextField
+                label="Design Vector Tolerance"
+                name="tolx"
+                value={values.tolx}
+                onChange={handleChange('tolx')}
+                type="text"
+                inputProps={{
+                  pattern: "[+-]?([1-9]\\d*|0)?(\\.\\d*)?([Ee][+-]?\\d+)?",
+                }}
+                className={classes.textField}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+                margin="normal"
+              />
+              <br/>
+              <TextField
+                label="Objective Function Tolerance"
+                name="tolf"
+                value={values.tolf}
+                onChange={handleChange('tolf')}
+                type="text"
+                inputProps={{
+                  pattern: "[+-]?([1-9]\\d*|0)?(\\.\\d*)?([Ee][+-]?\\d+)?",
+                }}
+                className={classes.textField}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+                margin="normal"
+              />
+            </Container>
+          </ExpansionPanelDetails>
+        </ExpansionPanel>
 
-  render() {
-    return (
-      <form onSubmit={(event) => this.addRun(event)}>
+        <ExpansionPanel>
+          <ExpansionPanelSummary
+            expandIcon={<ExpandMoreIcon />}
+            aria-controls="panel1a-content"
+            id="panel1a-header"
+          >
+            <Typography className={classes.heading}>Miscellaneous Settings</Typography>
+          </ExpansionPanelSummary>
+          <ExpansionPanelDetails>
+            <Container maxWidth="xs">
+              <TextField
+                label="Number of Processors"
+                name="n_proc"
+                value={values.n_proc}
+                onChange={handleChange('n_proc')}
+                type="number"
+                inputProps={{
+                  min: 1,
+                }}
+                className={classes.textField}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+                margin="normal"
+              />
+              <br/>
+              <FormControlLabel control={
+                <Switch
+                  checked={values.report}
+                  onChange={handleChange('report')}
+                  value="report"
+                  name="report"
+                  inputProps={{ 'aria-label': 'primary checkbox' }}
+                />} label="Report Results via Email?" //labelPlacement="top"
+              />
+            </Container>
+          </ExpansionPanelDetails>
+        </ExpansionPanel>
 
-        <MyCollapsible titleClassName="title is-4" title="Basic Problem Setup">
-          <div className="columns">
-            <div className="field column">
-              <label className="label">Design Lift Coefficient</label>
-              <div className="control">
-                <input
-                  name="cl"
-                  className="input"
-                  type="number"
-                  step="0.01"
-                  required
-                  value={this.state.cl}
-                  onChange={this.handleChange}
-                />
-              </div>
-            </div>
-            <div className="column"/>
-          </div>
-
-          <div className="columns">
-            <div className="field column">
-              <label className="label">Fix TE Thickness?</label>
-              <div className="field">
-                <input className="is-checkradio"
-                       type="radio"
-                       name="fix_te"
-                       value={true}
-                       checked={this.state.fix_te}
-                       onChange={this.handleChange}
-                />
-                <label
-                  className="radio"
-                  onClick={(event) => this.radioHelper(
-                    {
-                      target: {
-                        name: "fix_te",
-                        value: "true",
-                      }
-                    })}
-                >Yes</label>
-                <input className="is-checkradio"
-                       type="radio"
-                       name="fix_te"
-                       value={false}
-                       checked={!this.state.fix_te}
-                       onChange={this.handleChange}
-                />
-                <label
-                  className="radio"
-                  onClick={(event) => this.radioHelper(
-                    {
-                      target: {
-                        name: "fix_te",
-                        value: "false",
-                      }
-                    })}
-                >No</label>
-              </div>
-            </div>
-
-            <div className="field column">
-              <label className="label">Constrain Thickness?</label>
-              <div className="control">
-                <input className="is-checkradio"
-                       type="radio"
-                       name="constrain_thickness"
-                       value={true}
-                       checked={this.state.constrain_thickness}
-                       onChange={this.handleChange}
-                />
-                <label
-                  className="radio"
-                  onClick={(event) => this.radioHelper(
-                    {
-                      target: {
-                        name: "constrain_thickness",
-                        value: "true",
-                      }
-                    })}
-                >Yes</label>
-                <input className="is-checkradio"
-                       type="radio"
-                       name="constrain_thickness"
-                       value={false}
-                       checked={!this.state.constrain_thickness}
-                       onChange={this.handleChange}
-                />
-                <label
-                  className="radio"
-                  onClick={(event) => this.radioHelper(
-                    {
-                      target: {
-                        name: "constrain_thickness",
-                        value: "false",
-                      }
-                    })}
-                >No</label>
-              </div>
-            </div>
-          </div>
-
-          <div className="columns">
-            <div className="field column">
-              <label className="label">Constrain Area?</label>
-              <div className="control">
-                <input className="is-checkradio"
-                       type="radio"
-                       name="constrain_area"
-                       value={true}
-                       checked={this.state.constrain_area}
-                       onChange={this.handleChange}
-                />
-                <label
-                  className="radio"
-                  onClick={(event) => this.radioHelper(
-                    {
-                      target: {
-                        name: "constrain_area",
-                        value: "true",
-                      }
-                    })}
-                >Yes</label>
-                <input className="is-checkradio"
-                       type="radio"
-                       name="constrain_area"
-                       value={false}
-                       checked={!this.state.constrain_area}
-                       onChange={this.handleChange}
-                />
-                <label
-                  className="radio"
-                  onClick={(event) => this.radioHelper(
-                    {
-                      target: {
-                        name: "constrain_area",
-                        value: "false",
-                      }
-                    })}
-                >No</label>
-              </div>
-            </div>
-
-            <div className="field column">
-              <label className="label">Constrain Moment?</label>
-              <div className="control">
-                <input className="is-checkradio"
-                       type="radio"
-                       name="constrain_moment"
-                       value={true}
-                       checked={this.state.constrain_moment}
-                       onChange={this.handleChange}
-                />
-                <label
-                  className="radio"
-                  onClick={(event) => this.radioHelper(
-                    {
-                      target: {
-                        name: "constrain_moment",
-                        value: "true",
-                      }
-                    })}
-                >Yes</label>
-                <input className="is-checkradio"
-                       type="radio"
-                       name="constrain_moment"
-                       value={false}
-                       checked={!this.state.constrain_moment}
-                       onChange={this.handleChange}
-                />
-                <label
-                  className="radio"
-                  onClick={(event) => this.radioHelper(
-                    {
-                      target: {
-                        name: "constrain_moment",
-                        value: "false",
-                      }
-                    })}
-                >No</label>
-              </div>
-            </div>
-          </div>
-        </MyCollapsible>
-
-        <MyCollapsible titleClassName="title is-4" title="Number of Design Variables">
-          <div className="columns">
-            <div className="field column">
-              <label className="label">Chord Line</label>
-              <div className="control">
-                <input
-                  name="n_c"
-                  className="input"
-                  type="number"
-                  min="0"
-                  step="1"
-                  required
-                  value={this.state.n_c}
-                  onChange={this.handleChange}
-                />
-              </div>
-            </div>
-
-            <div className="field column">
-              <label className="label">Thickness Distribution</label>
-              <div className="control">
-                <input
-                  name="n_t"
-                  className="input"
-                  type="number"
-                  min="0"
-                  step="1"
-                  required
-                  value={this.state.n_t}
-                  onChange={this.handleChange}
-                />
-              </div>
-            </div>
-          </div>
-          <i className="italic">It is recommended to use between 3 and 6 for each.</i>
-        </MyCollapsible>
-
-        <MyCollapsible titleClassName="title is-4" title="Termination Settings">
-          <div className="columns">
-            <div className="field column">
-              <label className="label">Number of Generations</label>
-              <div className="control">
-                <input
-                  name="gen"
-                  className="input"
-                  type="number"
-                  min="0"
-                  step="1"
-                  required
-                  value={this.state.gen}
-                  onChange={this.handleChange}
-                />
-              </div>
-            </div>
-            <div className="column"/>
-          </div>
-          <div className="columns">
-            <div className="field column">
-              <label className="label">Design Vector Tolerance</label>
-              <div className="control">
-                <input
-                  name="tolx"
-                  className="input"
-                  type="text"
-                  pattern="[+-]?([1-9]\d*|0)?(\.\d*)?([Ee][+-]?\d+)?"
-                  required
-                  style={input_style}
-                  value={this.state.tolx}
-                  onChange={this.handleChange}
-                />
-              </div>
-            </div>
-            <div className="field column">
-              <label className="label">Objective Function Tolerance</label>
-              <div className="control">
-                <input
-                  name="tolf"
-                  className="input"
-                  type="text"
-                  pattern="[+-]?([1-9]\d*|0)?(\.\d*)?([Ee][+-]?\d+)?"
-                  required
-                  value={this.state.tolf}
-                  onChange={this.handleChange}
-                />
-              </div>
-            </div>
-          </div>
-        </MyCollapsible>
-
-        <MyCollapsible titleClassName="title is-4" title="Miscellaneous Settings">
-          <div className="columns">
-            <div className="field column">
-              <label className="label">Number of Processors</label>
-              <div className="control">
-                <input
-                  name="n_proc"
-                  className="input"
-                  type="number"
-                  step="1"
-                  min="1"
-                  required
-                  value={this.state.n_proc}
-                  onChange={this.handleChange}
-                />
-              </div>
-            </div>
-
-            <div className="field column">
-              <label className="label">Report Result via Email?</label>
-              <div className="control">
-                <input className="is-checkradio"
-                       type="radio"
-                       name="report"
-                       value={true}
-                       checked={this.state.report}
-                       onChange={this.handleChange}
-                />
-                <label
-                  className="radio"
-                  onClick={(event) => this.radioHelper(
-                    {
-                      target: {
-                        name: "report",
-                        value: "true",
-                      }
-                    })}
-                >Yes</label>
-                <input className="is-checkradio"
-                       type="radio"
-                       name="report"
-                       value={false}
-                       checked={!this.state.report}
-                       onChange={this.handleChange}
-                />
-                <label
-                  className="radio"
-                  onClick={(event) => this.radioHelper(
-                    {
-                      target: {
-                        name: "report",
-                        value: "false",
-                      }
-                    })}
-                >No</label>
-              </div>
-            </div>
-          </div>
-        </MyCollapsible>
-        <input
-          type="submit"
-          className="button is-primary is-large is-fullwidth"
-          value="Submit"
-        />
+        <ButtonGroup fullWidth aria-label="full width outlined button group">
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleClose}
+          >Cancel</Button>
+          <Button
+            type="submit"
+            variant="contained"
+            color="primary"
+          >Submit</Button>
+        </ButtonGroup>
       </form>
-    );
-  }
+    </Dialog>
+  );
 }
-
-export default AddRun;
