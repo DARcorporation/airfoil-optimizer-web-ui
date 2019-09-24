@@ -2,16 +2,9 @@ import React from 'react';
 import axios from "axios";
 
 import { makeStyles } from '@material-ui/core/styles';
-import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
 import {
-  Box,
   Button,
-  ButtonGroup,
-  Container,
   Dialog, DialogActions, DialogContent, DialogTitle,
-  ExpansionPanel,
-  ExpansionPanelDetails,
-  ExpansionPanelSummary,
   FormControlLabel, Paper,
   Switch,
   TextField,
