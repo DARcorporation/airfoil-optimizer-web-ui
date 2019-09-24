@@ -2,13 +2,15 @@ import React, {Component, useEffect} from 'react';
 import ReactDOM from 'react-dom';
 import {
   AppBar,
+  createMuiTheme,
   Fab,
   makeStyles,
   Paper,
   Toolbar,
-  Typography, Container,
-  Grid,
+  Typography,
+  Grid, useTheme,
 } from "@material-ui/core";
+import { ThemeProvider } from '@material-ui/styles';
 import AddIcon from "@material-ui/icons/Add";
 import KeyboardArrowUpIcon from '@material-ui/icons/KeyboardArrowUp';
 import axios from "axios";
@@ -42,7 +44,8 @@ const useStyles = makeStyles(theme => ({
 }));
 
 const App = (props) => {
-  const classes = useStyles();
+  const theme = useTheme();
+  const classes = useStyles(theme);
   const [addRunOpen, setAddRunOpen] = React.useState(false);
   const [runs, setRuns] = React.useState([]);
 
@@ -109,7 +112,21 @@ const App = (props) => {
   );
 };
 
+const theme = createMuiTheme({
+  palette: {
+    type: 'light',
+  },
+});
+
+const ThemedApp  = () => {
+  return (
+    <ThemeProvider theme={theme}>
+      <App/>
+    </ThemeProvider>
+  );
+};
+
 ReactDOM.render(
-  <App />,
+  <ThemedApp />,
   document.getElementById('root')
 );
