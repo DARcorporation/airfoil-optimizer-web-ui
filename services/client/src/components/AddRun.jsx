@@ -119,6 +119,7 @@ export default function AddRun(props) {
                 shrink: true,
               }}
               margin="normal"
+              variant="outlined"
             />
             <br/>
             <FormControlLabel control={
@@ -145,6 +146,7 @@ export default function AddRun(props) {
                 shrink: true,
               }}
               margin="normal"
+              variant="outlined"
             />
             <br/>
             <TextField
@@ -161,6 +163,7 @@ export default function AddRun(props) {
                 shrink: true,
               }}
               margin="normal"
+              variant="outlined"
             />
             <br/>
             <TextField
@@ -177,6 +180,7 @@ export default function AddRun(props) {
                 shrink: true,
               }}
               margin="normal"
+              variant="outlined"
             />
           </Paper>
           <Paper
@@ -200,6 +204,7 @@ export default function AddRun(props) {
                 shrink: true,
               }}
               margin="normal"
+              variant="outlined"
             />
             <br/>
             <TextField
@@ -216,6 +221,7 @@ export default function AddRun(props) {
                 shrink: true,
               }}
               margin="normal"
+              variant="outlined"
             />
           </Paper>
           <Paper
@@ -239,6 +245,7 @@ export default function AddRun(props) {
                 shrink: true,
               }}
               margin="normal"
+              variant="outlined"
             />
             <br/>
             <TextField
@@ -255,6 +262,7 @@ export default function AddRun(props) {
                 shrink: true,
               }}
               margin="normal"
+              variant="outlined"
             />
             <br/>
             <TextField
@@ -271,6 +279,7 @@ export default function AddRun(props) {
                 shrink: true,
               }}
               margin="normal"
+              variant="outlined"
             />
           </Paper>
           <Paper
@@ -293,6 +302,7 @@ export default function AddRun(props) {
                 shrink: true,
               }}
               margin="normal"
+              variant="outlined"
             />
             <br/>
             <FormControlLabel control={
