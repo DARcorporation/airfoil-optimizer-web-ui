@@ -74,7 +74,7 @@ def run(
         path = os.path.join(os.path.abspath(os.environ["RESULTS_DIR"]), run_name)
         os.makedirs(path)
 
-        repr_file = os.path.join(path, "repr.txt")
+        repr_file = os.path.join(path, "repr.yml")
         dat_file = os.path.join(path, "optimized.dat")
         png_file = os.path.join(path, "optimized.png")
         log_file = os.path.join(path, "log.txt")
@@ -125,6 +125,15 @@ def run(
             msg["Subject"] = "Airfoil Optimization Complete!"
             with open(repr_file, "r") as f:
                 msg.attach(MIMEText(f.read(), "plain"))
+
+                f.seek(0)
+                attachment = MIMEText(f.read(), _subtype="yaml")
+                attachment.add_header(
+                    "Content-Disposition",
+                    "attachment",
+                    filename=os.path.basename(repr_file),
+                )
+                msg.attach(attachment)
             with open(png_file, "rb") as fp:
                 attachment = MIMEImage(fp.read(), _subtype="png")
                 attachment.add_header(

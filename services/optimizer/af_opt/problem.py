@@ -437,7 +437,7 @@ class AfOptModel(om.Group):
         yaml += f"Cl: {outputs['ivc.Cl_des']['value'][0]:.4g}\n"
         yaml += f"M: {outputs['ivc.M']['value'][0]:.4g}\n"
         yaml += f"Re: {outputs['ivc.Re']['value'][0]:.4g}\n"
-        yaml += ('t_te' if self.options['fix_te'] else 'min t_te') + f"{self.options['t_te_min']:.4g}\n"
+        yaml += ('' if self.options['fix_te'] else 'min ') + f"t_te: {self.options['t_te_min']:.4g}\n"
         if self.options['t_c_min'] is not None:
             yaml += f"t_c_min: {self.options['t_c_min']:.4g}\n"
         if self.options['A_cs_min'] is not None:
@@ -570,7 +570,7 @@ def main(
     A_cs_min=None,
     Cm_max=None,
     seed=None,
-    repr_file="repr.txt",
+    repr_file="repr.yml",
     dat_file="optimized.dat",
     png_file="optimized.png",
 ):
