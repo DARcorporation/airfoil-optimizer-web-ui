@@ -90,19 +90,17 @@ const App = (props) => {
         </Toolbar>
       </AppBar>
       <Toolbar id="back-to-top-anchor" />
-      <Paper className={classes.paper}>
-        <Grid
-          container
-          justify="center"
-          alignItems="center"
-        >
-          {runs.map((run) => (
-            <Grid item key={run.id}>
-              <Run run={run} />
-            </Grid>
-          ))}
-        </Grid>
-      </Paper>
+      <Grid
+        container
+        justify="center"
+        alignItems="center"
+      >
+        {runs.map((run) => (
+          <Grid item key={run.id}>
+            <Run run={run} />
+          </Grid>
+        ))}
+      </Grid>
       <ScrollTop {...props}>
         <Fab color="secondary" size="small" aria-label="scroll back to top">
           <KeyboardArrowUpIcon />
