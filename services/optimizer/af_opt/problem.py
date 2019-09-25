@@ -433,6 +433,9 @@ class AfOptModel(om.Group):
     def __repr__(self):
         outputs = dict(self.list_outputs(out_stream=None))
 
+        s_t_te_des = f"{outputs['ivc.t_te']['value'][0]:.4g}"
+        desvar_formatter = {'float_kind': '{: 7.4f}'.format}
+
         yaml = ""
         yaml += f"Cl: {outputs['ivc.Cl_des']['value'][0]:.4g}\n"
         yaml += f"M: {outputs['ivc.M']['value'][0]:.4g}\n"
@@ -448,10 +451,10 @@ class AfOptModel(om.Group):
         yaml += f"Cm: {outputs['XFoil.Cm']['value'][0]: .4g}\n"
         yaml += f"t_c: {outputs['Geom.t_c']['value'][0]:.4g}\n"
         yaml += f"A_cs: {outputs['Geom.A_cs']['value'][0]:.4g}\n"
-        yaml += f"a_c: {np.array2string(outputs['ivc.a_c']['value'], formatter=array_formatter, separator=', ')}\n"
-        yaml += f"a_t: {np.array2string(outputs['ivc.a_t']['value'], formatter=array_formatter, separator=', ')}, \n"
+        yaml += f"a_c: {np.array2string(outputs['ivc.a_c']['value'], formatter=desvar_formatter, separator=', ')}\n"
+        yaml += f"a_t: {np.array2string(outputs['ivc.a_t']['value'], formatter=desvar_formatter, separator=', ')}"
         if not self.options['fix_te']:
-            yaml += f"t_te: {outputs['ivc.t_te']['value'][0]:.4g}"
+            yaml += f"\nt_te: {s_t_te_des}"
 
         return yaml
 
