@@ -53,6 +53,7 @@ export default function AddRun(props) {
     report: false,
   });
   const [TELabel, setTELabel] = React.useState("TE Thickness");
+  const [batch, setBatch] = React.useState(1);
 
   const handleChange = name => event => {
     if (['fix_te', 'report'].includes(name)) {
@@ -65,6 +66,8 @@ export default function AddRun(props) {
           setTELabel("TE Thickness");
         }
       }
+    } else if (name === 'batch') {
+      setBatch(event.target.value);
     } else {
       setValues({...values, [name]: event.target.value});
     }
@@ -91,12 +94,11 @@ export default function AddRun(props) {
       n_proc: values.n_proc,
       report: values.report,
     };
-    console.log(data);
-    axios.post(`${process.env.REACT_APP_RUNS_SERVICE_URL}/runs`, data)
-      .then((res) => {
-
-      })
-      .catch((err) => { console.log(err); });
+    for (let i = 0; i < batch; i++) {
+      axios.post(`${process.env.REACT_APP_RUNS_SERVICE_URL}/runs`, data)
+        .then((res) => {})
+        .catch((err) => { console.log(err); });
+    }
     onClose();
   };
 
@@ -321,6 +323,23 @@ export default function AddRun(props) {
               name="n_proc"
               value={values.n_proc}
               onChange={handleChange('n_proc')}
+              type="number"
+              inputProps={{
+                min: 1,
+              }}
+              className={classes.textField}
+              InputLabelProps={{
+                shrink: true,
+              }}
+              margin="normal"
+              variant="outlined"
+            />
+            <br/>
+            <TextField
+              label="Batch Submit"
+              name="batch"
+              value={batch}
+              onChange={handleChange('batch')}
               type="number"
               inputProps={{
                 min: 1,
