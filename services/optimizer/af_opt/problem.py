@@ -466,22 +466,6 @@ def get_de_driver(gen=100, tolx=1e-8, tolf=1e-8, seed=None):
     return driver
 
 
-def problem2string(prob, dt):
-    """
-    Return a representation of the state of the optimization problem.
-
-    Parameters
-    ----------
-    prob : openmdao.api.Problem
-        Airfoil optimization problem
-    dt : float
-        Time in seconds elapsed since last evaluation
-    """
-    s = prob.model.__repr__() + "\n"
-    s += f"Time elapsed: {timedelta(seconds=dt)}"
-    return s
-
-
 def get_coords(prob):
     """
     Get the coordinates of the airfoil represented by the current state of the airfoil optimization problem.
@@ -637,9 +621,9 @@ def main(
 
     # Show and write final results
     if rank == 0:
-        s = problem2string(prob, dt)
         print("Optimized airfoil:")
-        print(s)
+        print(prob.model.__repr__())
+        print(f"Took {timedelta(seconds=dt)}.")
 
         with open(repr_file, "w") as f:
             f.write(s)
