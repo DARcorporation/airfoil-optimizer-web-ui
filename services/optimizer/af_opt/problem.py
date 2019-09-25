@@ -621,12 +621,13 @@ def main(
 
     # Show and write final results
     if rank == 0:
+        yaml = prob.model.__repr__()
         print("Optimized airfoil:")
-        print(prob.model.__repr__())
+        print(yaml)
         print(f"Took {timedelta(seconds=dt)}.")
 
         with open(repr_file, "w") as f:
-            f.write(s)
+            f.write(yaml)
         write(prob, filename=dat_file)
         fig = plot(prob)
         fig.savefig(png_file)
