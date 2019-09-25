@@ -623,8 +623,8 @@ def main(
     if rank == 0:
         yaml = prob.model.__repr__()
         print("Optimized airfoil:")
-        print(yaml)
-        print(f"Took {timedelta(seconds=dt)}.")
+        print("    " + yaml.replace("\n", "\n    "))
+        print(f"Time Elapsed: {timedelta(seconds=dt)}")
 
         with open(repr_file, "w") as f:
             f.write(yaml)
