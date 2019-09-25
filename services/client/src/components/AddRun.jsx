@@ -45,16 +45,26 @@ export default function AddRun(props) {
     gen: 1000,
     tolx: 1e-8,
     tolf: 1e-8,
+    t_te_min: 0.0025,
     t_c_min: 0.01,
     A_cs_min: null,
     Cm_max: null,
     n_proc: 28,
     report: false,
   });
+  const [TELabel, setTELabel] = React.useState("TE Thickness");
 
   const handleChange = name => event => {
     if (['fix_te', 'report'].includes(name)) {
-      setValues({ ...values, [name]: !values[name]})
+      setValues({ ...values, [name]: !values[name]});
+
+      if (name === 'fix_te') {
+        if (values[name]) {
+          setTELabel("Minimum TE Thickness");
+        } else {
+          setTELabel("TE Thickness");
+        }
+      }
     } else {
       setValues({...values, [name]: event.target.value});
     }
@@ -74,6 +84,7 @@ export default function AddRun(props) {
       gen: values.gen,
       tolx: values.tolx,
       tolf: values.tolf,
+      t_te_min: values.t_te_min ? Number(values.t_te_min) : null,
       t_c_min: values.t_c_min ? Number(values.t_c_min) : null,
       A_cs_min: values.A_cs_min ? Number(values.A_cs_min) : null,
       Cm_max: values.Cm_max ? Number(values.Cm_max) : null,
@@ -130,6 +141,23 @@ export default function AddRun(props) {
                 name="fix_te"
                 inputProps={{ 'aria-label': 'primary checkbox' }}
               />} label="Fix TE Thickness?" //labelPlacement="top"
+            />
+            <br/>
+            <TextField
+              label={TELabel}
+              name="t_te_min"
+              value={values.t_te_min}
+              onChange={handleChange('t_te_min')}
+              type="text"
+              inputProps={{
+                pattern: "-?([1-9]\\d*|0)+(\\.\\d*)?([Ee][+-]?\\d+)?",
+              }}
+              className={classes.textField}
+              InputLabelProps={{
+                shrink: true,
+              }}
+              margin="normal"
+              variant="outlined"
             />
             <br/>
             <TextField

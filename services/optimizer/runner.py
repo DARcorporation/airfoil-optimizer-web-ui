@@ -24,6 +24,7 @@ def run(
     tolx=1e-8,
     tolf=1e-8,
     fix_te=True,
+    t_te_min=0.,
     t_c_min=0.01,
     A_cs_min=None,
     Cm_max=None,
@@ -45,6 +46,8 @@ def run(
         Number of generations to use for the genetic algorithm. 100 by default
     fix_te : bool, optional
         True if the trailing edge thickness should be fixed. True by default
+    t_te_min : float, optional
+        Minimum TE thickness as fraction of chord length. Default is 0.0.
     t_c_min : float or None, optional
         Minimum thickness over chord ratio. None if unconstrained. Defaults is 0.01.
     A_cs_min : float or None, optional
@@ -91,6 +94,7 @@ def run(
             str(tolx),
             str(tolf),
             str(fix_te),
+            str(t_te_min),
             str(t_c_min),
             str(A_cs_min),
             str(Cm_max),

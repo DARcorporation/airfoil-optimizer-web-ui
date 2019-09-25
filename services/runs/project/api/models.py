@@ -12,6 +12,7 @@ class Run(db.Model):
     tolx = db.Column(db.Float(), nullable=False)
     tolf = db.Column(db.Float(), nullable=False)
     fix_te = db.Column(db.Boolean(), nullable=False, default=True)
+    t_te_min = db.Column(db.Float(), nullable=True, default=0.)
     t_c_min = db.Column(db.Float(), nullable=True, default=0.01)
     A_cs_min = db.Column(db.Float(), nullable=True, default=None)
     Cm_max = db.Column(db.Float(), nullable=True, default=None)
@@ -29,6 +30,7 @@ class Run(db.Model):
         tolx=1e-8,
         tolf=1e-8,
         fix_te=True,
+        t_te_min=0.,
         t_c_min=0.01,
         A_cs_min=None,
         Cm_max=None,
@@ -46,6 +48,7 @@ class Run(db.Model):
         self.tolx = tolx
         self.tolf = tolf
         self.fix_te = fix_te
+        self.t_te_min = t_te_min
         self.t_c_min = t_c_min
         self.A_cs_min = A_cs_min
         self.Cm_max = Cm_max

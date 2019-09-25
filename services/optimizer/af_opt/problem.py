@@ -361,6 +361,7 @@ class AfOptModel(om.Group):
         self.options.declare("n_t", default=6, types=int)
         self.options.declare("fix_te", default=True, types=bool)
 
+        self.options.declare("t_te_min", default=0.0, lower=0., types=float, allow_none=False)
         self.options.declare("t_c_min", default=0.1, types=float, allow_none=True)
         self.options.declare("A_cs_min", default=0.1, types=float, allow_none=True)
         self.options.declare("Cm_max", default=None, types=float, allow_none=True)
@@ -377,7 +378,6 @@ class AfOptModel(om.Group):
         a_c_upper = np.ones(n_c)
         a_t_lower = 0.01 * np.ones(n_t)
         a_t_upper = 0.6 * np.ones(n_t)
-        t_te_lower = 0.0
         t_te_upper = 0.1
 
         # Independent variables
@@ -398,7 +398,7 @@ class AfOptModel(om.Group):
         self.add_design_var("a_t", lower=a_t_lower, upper=a_t_upper)
 
         if not self.options["fix_te"]:
-            self.add_design_var("t_te", lower=t_te_lower, upper=t_te_upper)
+            self.add_design_var("t_te", lower=self.options['t_te_min'], upper=t_te_upper)
 
         # Objective
         self.add_objective("Cd")  # Cd
@@ -567,6 +567,7 @@ def main(
     tolx=1e-8,
     tolf=1e-8,
     fix_te=True,
+    t_te_min=0.,
     t_c_min=0.01,
     A_cs_min=None,
     Cm_max=None,
@@ -592,6 +593,8 @@ def main(
         Tolerance on the spread of objective functions.
     fix_te : bool, optional
         True if the trailing edge thickness should be fixed. True by default
+    t_te_min : float, optional
+        Minimum TE thickness as fraction of chord length. Default is 0.0.
     t_c_min : float or None, optional
         Minimum thickness over chord ratio. None if unconstrained. Defaults is 0.01.
     A_cs_min : float or None, optional
@@ -608,6 +611,7 @@ def main(
         n_c=n_c,
         n_t=n_t,
         fix_te=fix_te,
+        t_te_min=t_te_min,
         t_c_min=t_c_min,
         A_cs_min=A_cs_min,
         Cm_max=Cm_max,
@@ -657,7 +661,7 @@ def main(
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 15:
+    if len(sys.argv) == 16:
         main(
             cl=float(sys.argv[1]),
             n_c=int(sys.argv[2]),
@@ -666,13 +670,14 @@ if __name__ == "__main__":
             tolx=float(sys.argv[5]),
             tolf=float(sys.argv[6]),
             fix_te=(sys.argv[7] == "True"),
-            t_c_min=None if sys.argv[8] == "None" else float(sys.argv[8]),
-            A_cs_min=None if sys.argv[9] == "None" else float(sys.argv[9]),
-            Cm_max=None if sys.argv[10] == "None" else float(sys.argv[10]),
-            seed=None if sys.argv[11] == "None" else int(sys.argv[11]),
-            repr_file=sys.argv[12],
-            dat_file=sys.argv[13],
-            png_file=sys.argv[14],
+            t_te_min=float(sys.argv[8]),
+            t_c_min=None if sys.argv[9] == "None" else float(sys.argv[9]),
+            A_cs_min=None if sys.argv[10] == "None" else float(sys.argv[10]),
+            Cm_max=None if sys.argv[11] == "None" else float(sys.argv[11]),
+            seed=None if sys.argv[12] == "None" else int(sys.argv[12]),
+            repr_file=sys.argv[13],
+            dat_file=sys.argv[14],
+            png_file=sys.argv[15],
         )
     else:
         main(1.0, 3, 3, gen=9)
