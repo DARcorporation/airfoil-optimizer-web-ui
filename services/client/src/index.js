@@ -97,7 +97,7 @@ const App = (props) => {
           alignItems="center"
         >
           {runs.map((run) => (
-            <Grid item>
+            <Grid item key={run.id}>
               <Run run={run} />
             </Grid>
           ))}

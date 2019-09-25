@@ -7,7 +7,7 @@ import {
   CardContent,
   CardMedia,
   makeStyles,
-  Typography,
+  Typography, Container, Paper,
 } from "@material-ui/core";
 
 const useStyles = makeStyles(theme => ({
@@ -40,7 +40,9 @@ export default function Run(props) {
               )
             }
           }
-        />
+        >
+          <Paper />
+        </CardMedia>
         <CardContent>
           <Typography gutterBottom variant="h5" component="h2">
             Optimization Run

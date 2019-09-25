@@ -47,8 +47,8 @@ export default function AddRun(props) {
     tolf: 1e-8,
     t_te_min: 0.0025,
     t_c_min: 0.01,
-    A_cs_min: null,
-    Cm_max: null,
+    A_cs_min: '',
+    Cm_max: '',
     n_proc: 28,
     report: false,
   });
@@ -107,261 +107,260 @@ export default function AddRun(props) {
       className={classes.dialog}
       open={open}
       onClose={handleClose}
+      scroll="paper"
+      aria-labelledby="scroll-dialog-title"
     >
-      <DialogTitle>Submit New Run</DialogTitle>
-      <form onSubmit={(event) => addRun(event)}>
-        <DialogContent>
-          <Paper
-            container
-            maxWidth="xs"
-            className={classes.paper}
-          >
-            <Typography variant="h7">Basic Problem Setup</Typography>
-            <br/>
-            <TextField
-              label="Design Lift Coefficient"
-              name="cl"
-              value={values.cl}
-              onChange={handleChange('cl')}
-              type="number"
-              inputProps={{
-                step: 0.001,
-              }}
-              className={classes.textField}
-              InputLabelProps={{
-                shrink: true,
-              }}
-              margin="normal"
-              variant="outlined"
-            />
-            <br/>
-            <FormControlLabel control={
-              <Switch
-                checked={values.fix_te}
-                onChange={handleChange('fix_te')}
-                value="fix_te"
-                name="fix_te"
-                inputProps={{ 'aria-label': 'primary checkbox' }}
-              />} label="Fix TE Thickness?" //labelPlacement="top"
-            />
-            <br/>
-            <TextField
-              label={TELabel}
-              name="t_te_min"
-              value={values.t_te_min}
-              onChange={handleChange('t_te_min')}
-              type="text"
-              inputProps={{
-                pattern: "-?([1-9]\\d*|0)+(\\.\\d*)?([Ee][+-]?\\d+)?",
-              }}
-              className={classes.textField}
-              InputLabelProps={{
-                shrink: true,
-              }}
-              margin="normal"
-              variant="outlined"
-            />
-            <br/>
-            <TextField
-              label="Minimum t/c"
-              name="t_c_min"
-              value={values.t_c_min}
-              onChange={handleChange('t_c_min')}
-              type="text"
-              inputProps={{
-                pattern: "[+-]?([1-9]\\d*|0)?(\\.\\d*)?([Ee][+-]?\\d+)?",
-              }}
-              className={classes.textField}
-              InputLabelProps={{
-                shrink: true,
-              }}
-              margin="normal"
-              variant="outlined"
-            />
-            <br/>
-            <TextField
-              label="Minimum Area"
-              name="A_cs_min"
-              value={values.A_cs_min}
-              onChange={handleChange('A_cs_min')}
-              type="text"
-              inputProps={{
-                pattern: "[+-]?([1-9]\\d*|0)?(\\.\\d*)?([Ee][+-]?\\d+)?",
-              }}
-              className={classes.textField}
-              InputLabelProps={{
-                shrink: true,
-              }}
-              margin="normal"
-              variant="outlined"
-            />
-            <br/>
-            <TextField
-              label="Maximum Absolute Cm"
-              name="Cm_max"
-              value={values.Cm_max}
-              onChange={handleChange('Cm_max')}
-              type="text"
-              inputProps={{
-                pattern: "[+-]?([1-9]\\d*|0)?(\\.\\d*)?([Ee][+-]?\\d+)?",
-              }}
-              className={classes.textField}
-              InputLabelProps={{
-                shrink: true,
-              }}
-              margin="normal"
-              variant="outlined"
-            />
-          </Paper>
-          <Paper
-            container
-            maxWidth="xs"
-            className={classes.paper}
-          >
-            <Typography variant="h7">Number of Design Variables</Typography>
-            <br/>
-            <TextField
-              label="Mean Chord Line"
-              name="n_c"
-              value={values.n_c}
-              onChange={handleChange('n_c')}
-              type="number"
-              inputProps={{
-                min: 1,
-              }}
-              className={classes.textField}
-              InputLabelProps={{
-                shrink: true,
-              }}
-              margin="normal"
-              variant="outlined"
-            />
-            <br/>
-            <TextField
-              label="Thickness Distribution"
-              name="n_t"
-              value={values.n_t}
-              onChange={handleChange('n_t')}
-              type="number"
-              inputProps={{
-                min: 1,
-              }}
-              className={classes.textField}
-              InputLabelProps={{
-                shrink: true,
-              }}
-              margin="normal"
-              variant="outlined"
-            />
-          </Paper>
-          <Paper
-            container
-            maxWidth="xs"
-            className={classes.paper}
-          >
-            <Typography variant="h7">Termination Settings</Typography>
-            <br/>
-            <TextField
-              label="Number of Generations"
-              name="gen"
-              value={values.gen}
-              onChange={handleChange('gen')}
-              type="number"
-              inputProps={{
-                min: 0,
-              }}
-              className={classes.textField}
-              InputLabelProps={{
-                shrink: true,
-              }}
-              margin="normal"
-              variant="outlined"
-            />
-            <br/>
-            <TextField
-              label="Design Vector Tolerance"
-              name="tolx"
-              value={values.tolx}
-              onChange={handleChange('tolx')}
-              type="text"
-              inputProps={{
-                pattern: "[+-]?([1-9]\\d*|0)?(\\.\\d*)?([Ee][+-]?\\d+)?",
-              }}
-              className={classes.textField}
-              InputLabelProps={{
-                shrink: true,
-              }}
-              margin="normal"
-              variant="outlined"
-            />
-            <br/>
-            <TextField
-              label="Objective Function Tolerance"
-              name="tolf"
-              value={values.tolf}
-              onChange={handleChange('tolf')}
-              type="text"
-              inputProps={{
-                pattern: "[+-]?([1-9]\\d*|0)?(\\.\\d*)?([Ee][+-]?\\d+)?",
-              }}
-              className={classes.textField}
-              InputLabelProps={{
-                shrink: true,
-              }}
-              margin="normal"
-              variant="outlined"
-            />
-          </Paper>
-          <Paper
-            container
-            maxWidth="xs"
-            className={classes.paper}
-          >
-            <Typography variant="h7">Miscellaneous</Typography>
-            <TextField
-              label="Number of Processors"
-              name="n_proc"
-              value={values.n_proc}
-              onChange={handleChange('n_proc')}
-              type="number"
-              inputProps={{
-                min: 1,
-              }}
-              className={classes.textField}
-              InputLabelProps={{
-                shrink: true,
-              }}
-              margin="normal"
-              variant="outlined"
-            />
-            <br/>
-            <TextField
-              label="Batch Submit"
-              name="batch"
-              value={batch}
-              onChange={handleChange('batch')}
-              type="number"
-              inputProps={{
-                min: 1,
-              }}
-              className={classes.textField}
-              InputLabelProps={{
-                shrink: true,
-              }}
-              margin="normal"
-              variant="outlined"
-            />
-            <br/>
-            <FormControlLabel control={
-              <Switch
-                checked={values.report}
-                onChange={handleChange('report')}
-                value="report"
-                name="report"
-                inputProps={{ 'aria-label': 'primary checkbox' }}
-              />} label="Report Results via Email?" //labelPlacement="top"
-            />
-          </Paper>
+      <DialogTitle id="scroll-dialog-title">Submit New Run</DialogTitle>
+        <DialogContent dividers={true}>
+          <form onSubmit={(event) => addRun(event)} id="add-run-form">
+            <Paper
+              container="true"
+              className={classes.paper}
+            >
+              <Typography variant="h6">Basic Problem Setup</Typography>
+              <br/>
+              <TextField
+                label="Design Lift Coefficient"
+                name="cl"
+                value={values.cl}
+                onChange={handleChange('cl')}
+                type="number"
+                inputProps={{
+                  step: 0.001,
+                }}
+                className={classes.textField}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+                margin="normal"
+                variant="outlined"
+              />
+              <br/>
+              <FormControlLabel control={
+                <Switch
+                  checked={values.fix_te}
+                  onChange={handleChange('fix_te')}
+                  value="fix_te"
+                  name="fix_te"
+                  inputProps={{ 'aria-label': 'primary checkbox' }}
+                />} label="Fix TE Thickness?" //labelPlacement="top"
+              />
+              <br/>
+              <TextField
+                label={TELabel}
+                name="t_te_min"
+                value={values.t_te_min}
+                onChange={handleChange('t_te_min')}
+                type="text"
+                inputProps={{
+                  pattern: "-?([1-9]\\d*|0)+(\\.\\d*)?([Ee][+-]?\\d+)?",
+                }}
+                className={classes.textField}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+                margin="normal"
+                variant="outlined"
+              />
+              <br/>
+              <TextField
+                label="Minimum t/c"
+                name="t_c_min"
+                value={values.t_c_min}
+                onChange={handleChange('t_c_min')}
+                type="text"
+                inputProps={{
+                  pattern: "[+-]?([1-9]\\d*|0)?(\\.\\d*)?([Ee][+-]?\\d+)?",
+                }}
+                className={classes.textField}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+                margin="normal"
+                variant="outlined"
+              />
+              <br/>
+              <TextField
+                label="Minimum Area"
+                name="A_cs_min"
+                value={values.A_cs_min}
+                onChange={handleChange('A_cs_min')}
+                type="text"
+                inputProps={{
+                  pattern: "[+-]?([1-9]\\d*|0)?(\\.\\d*)?([Ee][+-]?\\d+)?",
+                }}
+                className={classes.textField}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+                margin="normal"
+                variant="outlined"
+              />
+              <br/>
+              <TextField
+                label="Maximum Absolute Cm"
+                name="Cm_max"
+                value={values.Cm_max}
+                onChange={handleChange('Cm_max')}
+                type="text"
+                inputProps={{
+                  pattern: "[+-]?([1-9]\\d*|0)?(\\.\\d*)?([Ee][+-]?\\d+)?",
+                }}
+                className={classes.textField}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+                margin="normal"
+                variant="outlined"
+              />
+            </Paper>
+            <Paper
+              container="true"
+              className={classes.paper}
+            >
+              <Typography variant="h6">Number of Design Variables</Typography>
+              <br/>
+              <TextField
+                label="Mean Chord Line"
+                name="n_c"
+                value={values.n_c}
+                onChange={handleChange('n_c')}
+                type="number"
+                inputProps={{
+                  min: 1,
+                }}
+                className={classes.textField}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+                margin="normal"
+                variant="outlined"
+              />
+              <br/>
+              <TextField
+                label="Thickness Distribution"
+                name="n_t"
+                value={values.n_t}
+                onChange={handleChange('n_t')}
+                type="number"
+                inputProps={{
+                  min: 1,
+                }}
+                className={classes.textField}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+                margin="normal"
+                variant="outlined"
+              />
+            </Paper>
+            <Paper
+              container="true"
+              className={classes.paper}
+            >
+              <Typography variant="h6">Termination Settings</Typography>
+              <br/>
+              <TextField
+                label="Number of Generations"
+                name="gen"
+                value={values.gen}
+                onChange={handleChange('gen')}
+                type="number"
+                inputProps={{
+                  min: 0,
+                }}
+                className={classes.textField}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+                margin="normal"
+                variant="outlined"
+              />
+              <br/>
+              <TextField
+                label="Design Vector Tolerance"
+                name="tolx"
+                value={values.tolx}
+                onChange={handleChange('tolx')}
+                type="text"
+                inputProps={{
+                  pattern: "[+-]?([1-9]\\d*|0)?(\\.\\d*)?([Ee][+-]?\\d+)?",
+                }}
+                className={classes.textField}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+                margin="normal"
+                variant="outlined"
+              />
+              <br/>
+              <TextField
+                label="Objective Function Tolerance"
+                name="tolf"
+                value={values.tolf}
+                onChange={handleChange('tolf')}
+                type="text"
+                inputProps={{
+                  pattern: "[+-]?([1-9]\\d*|0)?(\\.\\d*)?([Ee][+-]?\\d+)?",
+                }}
+                className={classes.textField}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+                margin="normal"
+                variant="outlined"
+              />
+            </Paper>
+            <Paper
+              container="true"
+              className={classes.paper}
+            >
+              <Typography variant="h6">Miscellaneous</Typography>
+              <TextField
+                label="Number of Processors"
+                name="n_proc"
+                value={values.n_proc}
+                onChange={handleChange('n_proc')}
+                type="number"
+                inputProps={{
+                  min: 1,
+                }}
+                className={classes.textField}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+                margin="normal"
+                variant="outlined"
+              />
+              <br/>
+              <TextField
+                label="Batch Submit"
+                name="batch"
+                value={batch}
+                onChange={handleChange('batch')}
+                type="number"
+                inputProps={{
+                  min: 1,
+                }}
+                className={classes.textField}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+                margin="normal"
+                variant="outlined"
+              />
+              <br/>
+              <FormControlLabel control={
+                <Switch
+                  checked={values.report}
+                  onChange={handleChange('report')}
+                  value="report"
+                  name="report"
+                  inputProps={{ 'aria-label': 'primary checkbox' }}
+                />} label="Report Results via Email?" //labelPlacement="top"
+              />
+            </Paper>
+          </form>
         </DialogContent>
         <DialogActions>
           <Button
@@ -369,11 +368,11 @@ export default function AddRun(props) {
             onClick={handleClose}
           >Cancel</Button>
           <Button
+            form="add-run-form"
             type="submit"
             color="primary"
           >Submit</Button>
         </DialogActions>
-      </form>
     </Dialog>
   );
 }
