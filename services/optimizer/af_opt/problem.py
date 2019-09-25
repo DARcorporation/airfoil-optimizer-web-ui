@@ -477,7 +477,7 @@ def problem2string(prob, dt):
     dt : float
         Time in seconds elapsed since last evaluation
     """
-    s = prob.model.__repr__() + ",\n"
+    s = prob.model.__repr__() + "\n"
     s += f"Time elapsed: {timedelta(seconds=dt)}"
     return s
 
