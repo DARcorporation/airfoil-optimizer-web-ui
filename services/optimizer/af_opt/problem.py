@@ -505,7 +505,7 @@ def get_coords(prob):
     return coords
 
 
-def plot(prob, show_legend=False, show_title=True, display=False):
+def plot(prob, display=False):
     """
     Plot the airfoil represented by the current state of the airfoil optimization problem.
 
@@ -513,10 +513,6 @@ def plot(prob, show_legend=False, show_title=True, display=False):
     ----------
     prob : openmdao.api.Problem
         Airfoil optimization problem
-    show_legend : bool, optional
-        True if a legend should be shown. False by default
-    show_title : bool, optional
-        True if a title should be shown based on the current state of the problem. True by default
     display : bool, optional
         True if the figure should be displayed. False by default
 
@@ -525,17 +521,19 @@ def plot(prob, show_legend=False, show_title=True, display=False):
     figure
     """
     import matplotlib.pyplot as plt
+    from matplotlib.ticker import MultipleLocator
 
-    fig = plt.figure()
+    fig, ax = plt.subplots()
     x, y_u, y_l, y_c, _ = cst2coords(prob["a_c"], prob["a_t"], prob["t_te"])
-    plt.plot(
-        coords_ref[:, 0], coords_ref[:, 1], "k", x, y_u, "r", x, y_l, "r", x, y_c, "r--"
-    )
-    plt.axis("scaled")
-    if show_legend:
-        plt.legend(["Original", "Optimized"])
-    if show_title:
-        plt.title(prob.model)
+    ax.plot(x, y_u, "k", x, y_l, "k", x, y_c, "k--")
+    ax.axis("scaled")
+    ax.set_xlabel('x/c')
+    ax.set_ylabel('y/c')
+    ax.xaxis.set_major_locator(MultipleLocator(0.2))
+    ax.xaxis.set_minor_locator(MultipleLocator(0.05))
+    ax.yaxis.set_major_locator(MultipleLocator(0.2))
+    ax.yaxis.set_minor_locator(MultipleLocator(0.05))
+    ax.grid(which='both')
     if display:
         fig.show()
     return fig
