@@ -433,27 +433,27 @@ class AfOptModel(om.Group):
     def __repr__(self):
         outputs = dict(self.list_outputs(out_stream=None))
 
-        s_t_c_min = "N/A" if self.options["t_c_min"] is None else f"{self.options['t_c_min']:.4g}"
-        s_A_cs_min = "N/A" if self.options["A_cs_min"] is None else f"{self.options['A_cs_min']:.4g}"
-        s_Cm_max = "N/A" if self.options["Cm_max"] is None else f"{self.options['Cm_max']:.4g}"
+        yaml = ""
+        yaml += f"Cl: {outputs['ivc.Cl_des']['value'][0]:.4g}\n"
+        yaml += f"M: {outputs['ivc.M']['value'][0]:.4g}\n"
+        yaml += f"Re: {outputs['ivc.Re']['value'][0]:.4g}\n"
+        yaml += ('t_te' if self.options['fix_te'] else 'min t_te') + f"{self.options['t_te_min']:.4g}\n"
+        if self.options['t_c_min'] is not None:
+            yaml += f"t_c_min: {self.options['t_c_min']:.4g}\n"
+        if self.options['A_cs_min'] is not None:
+            yaml += f"A_cs_min: {self.options['A_cs_min']:.4g}\n"
+        if self.options['Cm_max'] is not None:
+            yaml += f"Cm_max: {self.options['Cm_max']:.4g}\n"
+        yaml += f"Cd: {outputs['XFoil.Cd']['value'][0]:.4g}\n"
+        yaml += f"Cm: {outputs['XFoil.Cm']['value'][0]: .4g}\n"
+        yaml += f"t_c: {outputs['Geom.t_c']['value'][0]:.4g}\n"
+        yaml += f"A_cs: {outputs['Geom.A_cs']['value'][0]:.4g}\n"
+        yaml += f"a_c: {np.array2string(outputs['ivc.a_c']['value'], formatter=array_formatter, separator=', ')}\n"
+        yaml += f"a_t: {np.array2string(outputs['ivc.a_t']['value'], formatter=array_formatter, separator=', ')}, \n"
+        if not self.options['fix_te']:
+            yaml += f"t_te: {outputs['ivc.t_te']['value'][0]:.4g}"
 
-        s = ""
-        s += (
-            f"C_l_des: {outputs['ivc.Cl_des']['value'][0]:6.4f}, "
-            f"min t/c: {s_t_c_min}, \n"
-            f"min A_cs: {s_A_cs_min}, "
-            f"max Cm: {s_Cm_max}, \n"
-        )
-        s += (
-            f"C_d: {outputs['XFoil.Cd']['value'][0]:6.4f}, "
-            f"C_m: {outputs['XFoil.Cm']['value'][0]: .4g}, \n"
-            f"t_c: {outputs['Geom.t_c']['value'][0]:.4g}, "
-            f"A_cs: {outputs['Geom.A_cs']['value'][0]:.4g}, \n"
-        )
-        s += f"a_c: {np.array2string(outputs['ivc.a_c']['value'], formatter=array_formatter, separator=', ')}, \n"
-        s += f"a_t: {np.array2string(outputs['ivc.a_t']['value'], formatter=array_formatter, separator=', ')}, \n"
-        s += f"t_te: {outputs['ivc.t_te']['value'][0]: 7.4f}"
-        return s
+        return yaml
 
 
 def get_de_driver(gen=100, tolx=1e-8, tolf=1e-8, seed=None):
