@@ -361,9 +361,9 @@ class AfOptModel(om.Group):
         self.options.declare("n_t", default=6, types=int)
         self.options.declare("fix_te", default=True, types=bool)
 
-        self.options.declare("constrain_thickness", default=True, types=bool)
-        self.options.declare("constrain_area", default=True, types=bool)
-        self.options.declare("constrain_moment", default=True, types=bool)
+        self.options.declare("t_c_min", default=0.1, types=float, allow_none=True)
+        self.options.declare("A_cs_min", default=0.1, types=float, allow_none=True)
+        self.options.declare("Cm_max", default=None, types=float, allow_none=True)
 
         self.options.declare("n_coords", default=100, types=int)
 
@@ -388,10 +388,6 @@ class AfOptModel(om.Group):
         ivc.add_output("Re", val=1e6)
         ivc.add_output("M", val=0.0)
         ivc.add_output("Cl_des", val=1.0)
-        ivc.add_output("Cd_0", val=1.0)
-        ivc.add_output("Cm_ref", val=1.0)
-        ivc.add_output("t_c_0", val=1.0)
-        ivc.add_output("A_cs_0", val=1.0)
 
         # Main sub-systems
         self.add_subsystem("ivc", ivc, promotes=["*"])
@@ -405,56 +401,54 @@ class AfOptModel(om.Group):
             self.add_design_var("t_te", lower=t_te_lower, upper=t_te_upper)
 
         # Objective
-        self.add_subsystem(
-            "F", om.ExecComp("obj = Cd / Cd_0", obj=1, Cd=1.0, Cd_0=1.0), promotes=["*"]
-        )
-        self.add_objective("obj")  # Cd
+        self.add_objective("Cd")  # Cd
 
         # Constraints
         self.add_subsystem("Geom", Geom(n_c=n_c, n_t=n_t), promotes=["*"])
 
-        if self.options["constrain_thickness"]:
+        if self.options["t_c_min"] is not None:
             self.add_subsystem(
                 "G1",
-                om.ExecComp("g1 = 1 - t_c / t_c_0", g1=0.0, t_c=1.0, t_c_0=1.0),
+                om.ExecComp(f"g1 = 1 - t_c / {self.options['t_c_min']:15g}", g1=0.0, t_c=1.0),
                 promotes=["*"],
             )
-            self.add_constraint("g1", upper=0.0)  # t_c >= t_c_0
+            self.add_constraint("g1", upper=0.0)  # t_c >= t_c_min
 
-        if self.options["constrain_area"]:
+        if self.options["A_cs_min"] is not None:
             self.add_subsystem(
                 "G2",
-                om.ExecComp("g2 = 1 - A_cs / A_cs_0", g2=0, A_cs=1.0, A_cs_0=1.0),
+                om.ExecComp(f"g2 = 1 - A_cs / {self.options['A_cs_min']:15g}", g2=0, A_cs=1.0),
                 promotes=["*"],
             )
-            self.add_constraint("g2", upper=0.0)  # A_cs >= A_cs_0
+            self.add_constraint("g2", upper=0.0)  # A_cs >= A_cs_min
 
-        if self.options["constrain_moment"]:
+        if self.options["Cm_max"] is not None:
             self.add_subsystem(
                 "G3",
-                om.ExecComp(
-                    "g3 = 1 - abs(Cm) / abs(Cm_ref)", g3=0.0, Cm=1.0, Cm_ref=1.0
-                ),
+                om.ExecComp(f"g3 = 1 - abs(Cm) / {np.abs(self.options['A_cs_min']):15g}", g3=0.0, Cm=1.0),
                 promotes=["*"],
             )
             self.add_constraint("g3", lower=0.0)  # |Cm| <= |Cm_max|
 
     def __repr__(self):
         outputs = dict(self.list_outputs(out_stream=None))
+
+        s_t_c_min = "N/A" if self.options["t_c_min"] is None else f"{self.options['t_c_min']:.4g}"
+        s_A_cs_min = "N/A" if self.options["A_cs_min"] is None else f"{self.options['A_cs_min']:.4g}"
+        s_Cm_max = "N/A" if self.options["Cm_max"] is None else f"{self.options['Cm_max']:.4g}"
+
         s = ""
         s += (
-            f"Con.t_c: {'True' if self.options['constrain_thickness'] else 'False'}, "
-            f"Con.A_cs: {'True' if self.options['constrain_area'] else 'False'}. "
-            f"Con.Cm: {'True' if self.options['constrain_moment'] else 'False'}, \n"
-        )
-        s += (
-            f"Obj: {outputs['F.obj']['value'][0]:6.4f}, "
             f"C_l_des: {outputs['ivc.Cl_des']['value'][0]:6.4f}, "
-            f"C_m_ref: {outputs['ivc.Cm_ref']['value'][0]: 7.4f}, \n"
+            f"min t/c: {s_t_c_min}, \n"
+            f"min A_cs: {s_A_cs_min}, "
+            f"max Cm: {s_Cm_max}, \n"
         )
         s += (
             f"C_d: {outputs['XFoil.Cd']['value'][0]:6.4f}, "
-            f"C_m: {outputs['XFoil.Cm']['value'][0]: 7.4f}, \n"
+            f"C_m: {outputs['XFoil.Cm']['value'][0]: .4g}, \n"
+            f"t_c: {outputs['Geom.t_c']['value'][0]:.4g}, "
+            f"A_cs: {outputs['Geom.A_cs']['value'][0]:.4g}, \n"
         )
         s += f"a_c: {np.array2string(outputs['ivc.a_c']['value'], formatter=array_formatter, separator=', ')}, \n"
         s += f"a_t: {np.array2string(outputs['ivc.a_t']['value'], formatter=array_formatter, separator=', ')}, \n"
@@ -483,36 +477,6 @@ def problem2string(prob, dt):
     s = prob.model.__repr__() + ",\n"
     s += f"Time elapsed: {timedelta(seconds=dt)}"
     return s
-
-
-def analyze(prob, initial=True, set_cm_ref=False):
-    """
-    Simply analyze the airfoil once.
-
-    Parameters
-    ----------
-    prob : openmdao.api.Problem
-        Airfoil optimization problem
-    initial : bool, optional
-        True if initial references values should be set based on this analysis. True by default.
-    set_cm_ref : bool, optional
-        True if the initial value of Cm should be used for Cm_ref. False by default.
-
-    Returns
-    -------
-    openmdao.api.Problem
-    """
-    prob.run_model()
-
-    if initial:
-        prob["Cd_0"] = prob["Cd"]
-        prob["t_c_0"] = prob["t_c"]
-        prob["A_cs_0"] = prob["A_cs"]
-        if set_cm_ref:
-            prob["Cm_ref"] = prob["Cm"]
-
-        prob.run_model()
-    return prob
 
 
 def get_coords(prob):
@@ -603,10 +567,9 @@ def main(
     tolx=1e-8,
     tolf=1e-8,
     fix_te=True,
-    constrain_thickness=True,
-    constrain_area=True,
-    constrain_moment=True,
-    cm_ref=None,
+    t_c_min=0.01,
+    A_cs_min=None,
+    Cm_max=None,
     seed=None,
     repr_file="repr.txt",
     dat_file="optimized.dat",
@@ -623,12 +586,18 @@ def main(
         Number of CST coefficients for the chord line and thickness distribution, respectively
     gen : int, optional
         Number of generations to use for the genetic algorithm. 100 by default
+    tolx : float, optional
+        Tolerance on the spread of the design vectors.
+    tolf: float, optional
+        Tolerance on the spread of objective functions.
     fix_te : bool, optional
         True if the trailing edge thickness should be fixed. True by default
-    constrain_thickness, constrain_area, constrain_moment : bool, optional
-        True if the thickness, area, and/or moment coefficient should be constrained, respectively. All True by default
-    cm_ref : float, optional
-        If constrain_moment is True, this will be the maximum (absolute) moment coefficient. If None, initial Cm is used
+    t_c_min : float or None, optional
+        Minimum thickness over chord ratio. None if unconstrained. Defaults is 0.01.
+    A_cs_min : float or None, optional
+        Minimum cross sectional area. None if unconstrained. Default is None.
+    Cm_max : float or None, optional
+        Maximum absolute moment coefficient. None if unconstrained. Default is None.
     seed : int, optional
         Seed to use for the random number generator which creates an initial population for the genetic algorithm
     repr_file, dat_file, png_file : str, optional
@@ -639,9 +608,9 @@ def main(
         n_c=n_c,
         n_t=n_t,
         fix_te=fix_te,
-        constrain_thickness=constrain_thickness,
-        constrain_area=constrain_area,
-        constrain_moment=constrain_moment
+        t_c_min=t_c_min,
+        A_cs_min=A_cs_min,
+        Cm_max=Cm_max,
     )
 
     prob = om.Problem()
@@ -656,27 +625,9 @@ def main(
     )
     # Set reference values
     prob["Cl_des"] = cl
-    if cm_ref is not None:
-        prob["Cm_ref"] = cm_ref
 
-    # Analyze the reference airfoil and set reference values based on initial run
+    # Run model once to get a consistent starting point
     prob.run_model()
-
-    prob["Cd_0"] = prob["Cd"]
-    prob["t_c_0"] = prob["t_c"]
-    prob["A_cs_0"] = prob["A_cs"]
-    if cm_ref is None:
-        prob["Cm_ref"] = prob["Cm"]
-
-    # Run model one more time to have a consistent starting point
-    t0 = time.time()
-    prob.run_model()
-    dt = time.time() - t0
-
-    # Print results for reference airfoil
-    if rank == 0:
-        print("Reference airfoil:")
-        print(problem2string(prob, dt))
 
     # Optimize the problem using a genetic algorithm
     t0 = time.time()
@@ -706,7 +657,7 @@ def main(
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 16:
+    if len(sys.argv) == 15:
         main(
             cl=float(sys.argv[1]),
             n_c=int(sys.argv[2]),
@@ -715,14 +666,13 @@ if __name__ == "__main__":
             tolx=float(sys.argv[5]),
             tolf=float(sys.argv[6]),
             fix_te=(sys.argv[7] == "True"),
-            constrain_thickness=(sys.argv[8] == "True"),
-            constrain_area=(sys.argv[9] == "True"),
-            constrain_moment=(sys.argv[10] == "True"),
-            cm_ref=None if sys.argv[11] == "None" else float(sys.argv[11]),
-            seed=None if sys.argv[12] == "None" else int(sys.argv[12]),
-            repr_file=sys.argv[13],
-            dat_file=sys.argv[14],
-            png_file=sys.argv[15],
+            t_c_min=None if sys.argv[8] == "None" else float(sys.argv[8]),
+            A_cs_min=None if sys.argv[9] == "None" else float(sys.argv[9]),
+            Cm_max=None if sys.argv[10] == "None" else float(sys.argv[10]),
+            seed=None if sys.argv[11] == "None" else int(sys.argv[11]),
+            repr_file=sys.argv[12],
+            dat_file=sys.argv[13],
+            png_file=sys.argv[14],
         )
     else:
-        main(1.0, 3, 3, constrain_moment=False, gen=9)
+        main(1.0, 3, 3, gen=9)

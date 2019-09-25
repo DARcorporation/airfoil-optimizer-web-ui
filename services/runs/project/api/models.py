@@ -12,10 +12,9 @@ class Run(db.Model):
     tolx = db.Column(db.Float(), nullable=False)
     tolf = db.Column(db.Float(), nullable=False)
     fix_te = db.Column(db.Boolean(), nullable=False, default=True)
-    constrain_thickness = db.Column(db.Boolean(), nullable=False, default=True)
-    constrain_area = db.Column(db.Boolean(), nullable=False, default=True)
-    constrain_moment = db.Column(db.Boolean(), nullable=False, default=False)
-    cm_ref = db.Column(db.Float(), nullable=True)
+    t_c_min = db.Column(db.Float(), nullable=True, default=0.01)
+    A_cs_min = db.Column(db.Float(), nullable=True, default=None)
+    Cm_max = db.Column(db.Float(), nullable=True, default=None)
     seed = db.Column(db.Integer(), nullable=True)
     n_proc = db.Column(db.Integer(), nullable=False, default=28)
     report = db.Column(db.Boolean(), nullable=False, default=False)
@@ -30,9 +29,9 @@ class Run(db.Model):
         tolx=1e-8,
         tolf=1e-8,
         fix_te=True,
-        constrain_thickness=True,
-        constrain_area=True,
-        constrain_moment=False,
+        t_c_min=0.01,
+        A_cs_min=None,
+        Cm_max=None,
         cm_ref=None,
         seed=None,
         n_proc=28,
@@ -47,9 +46,9 @@ class Run(db.Model):
         self.tolx = tolx
         self.tolf = tolf
         self.fix_te = fix_te
-        self.constrain_thickness = constrain_thickness
-        self.constrain_area = constrain_area
-        self.constrain_moment = constrain_moment
+        self.t_c_min = t_c_min
+        self.A_cs_min = A_cs_min
+        self.Cm_max = Cm_max
         self.cm_ref = cm_ref
         self.seed = seed
         self.n_proc = n_proc

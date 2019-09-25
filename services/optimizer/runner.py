@@ -24,10 +24,9 @@ def run(
     tolx=1e-8,
     tolf=1e-8,
     fix_te=True,
-    constrain_thickness=True,
-    constrain_area=True,
-    constrain_moment=True,
-    cm_ref=None,
+    t_c_min=0.01,
+    A_cs_min=None,
+    Cm_max=None,
     seed=None,
     n_proc=28,
     run_name=None,
@@ -46,10 +45,12 @@ def run(
         Number of generations to use for the genetic algorithm. 100 by default
     fix_te : bool, optional
         True if the trailing edge thickness should be fixed. True by default
-    constrain_thickness, constrain_area, constrain_moment : bool, optional
-        True if the thickness, area, and/or moment coefficient should be constrained, respectively. All True by default
-    cm_ref : float, optional
-        If constrain_moment is True, this will be the maximum (absolute) moment coefficient. If None, initial Cm is used
+    t_c_min : float or None, optional
+        Minimum thickness over chord ratio. None if unconstrained. Defaults is 0.01.
+    A_cs_min : float or None, optional
+        Minimum cross sectional area. None if unconstrained. Default is None.
+    Cm_max : float or None, optional
+        Maximum absolute moment coefficient. None if unconstrained. Default is None.
     seed : int, optional
         Seed to use for the random number generator which creates an initial population for the genetic algorithm
     n_proc : int, optional
@@ -90,15 +91,15 @@ def run(
             str(tolx),
             str(tolf),
             str(fix_te),
-            str(constrain_thickness),
-            str(constrain_area),
-            str(constrain_moment),
-            str(cm_ref),
+            str(t_c_min),
+            str(A_cs_min),
+            str(Cm_max),
             str(seed),
             str(repr_file),
             str(dat_file),
             str(png_file),
         ]
+        print(f"Going to run the following command: \n{cmd}")
 
         with open(log_file, "wb") as log:
             process = subprocess.Popen(
@@ -172,6 +173,7 @@ def main():
         kwargs = dict(response_object["data"])
         del kwargs["id"]
         del kwargs["status"]
+        print(f"Got a request to start a run with the following data: \n{kwargs}")
 
         try:
             run(**kwargs)

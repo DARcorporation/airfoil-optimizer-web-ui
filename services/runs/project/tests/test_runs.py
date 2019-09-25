@@ -35,7 +35,6 @@ class TestRunsService(BaseTestCase):
                         "n_c": 3,
                         "n_t": 3,
                         "gen": 100,
-                        "constrain_moment": False,
                         "report": False,
                     }
                 ),

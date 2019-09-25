@@ -45,15 +45,15 @@ export default function AddRun(props) {
     gen: 1000,
     tolx: 1e-8,
     tolf: 1e-8,
-    constrain_thickness: true,
-    constrain_area: true,
-    constrain_moment: false,
+    t_c_min: 0.01,
+    A_cs_min: null,
+    Cm_max: null,
     n_proc: 28,
     report: false,
   });
 
   const handleChange = name => event => {
-    if (['fix_te', 'constrain_thickness', 'constrain_area', 'constrain_moment', 'report'].includes(name)) {
+    if (['fix_te', 'report'].includes(name)) {
       setValues({ ...values, [name]: !values[name]})
     } else {
       setValues({...values, [name]: event.target.value});
@@ -74,12 +74,13 @@ export default function AddRun(props) {
       gen: values.gen,
       tolx: values.tolx,
       tolf: values.tolf,
-      constrain_thickness: values.constrain_thickness,
-      constrain_area: values.constrain_area,
-      constrain_moment: values.constrain_moment,
+      t_c_min: values.t_c_min ? Number(values.t_c_min) : null,
+      A_cs_min: values.A_cs_min ? Number(values.A_cs_min) : null,
+      Cm_max: values.Cm_max ? Number(values.Cm_max) : null,
       n_proc: values.n_proc,
       report: values.report,
     };
+    console.log(data);
     axios.post(`${process.env.REACT_APP_RUNS_SERVICE_URL}/runs`, data)
       .then((res) => {
 
@@ -130,31 +131,52 @@ export default function AddRun(props) {
               />} label="Fix TE Thickness?" //labelPlacement="top"
             />
             <br/>
-            <FormControlLabel control={
-              <Switch
-                checked={values.constrain_thickness}
-                onChange={handleChange('constrain_thickness')}
-                name="constrain_thickness"
-                inputProps={{ 'aria-label': 'primary checkbox' }}
-              />} label="Constrain Thickness?" //labelPlacement="top"
+            <TextField
+              label="Minimum t/c"
+              name="t_c_min"
+              value={values.t_c_min}
+              onChange={handleChange('t_c_min')}
+              type="text"
+              inputProps={{
+                pattern: "[+-]?([1-9]\\d*|0)?(\\.\\d*)?([Ee][+-]?\\d+)?",
+              }}
+              className={classes.textField}
+              InputLabelProps={{
+                shrink: true,
+              }}
+              margin="normal"
             />
             <br/>
-            <FormControlLabel control={
-              <Switch
-                checked={values.constrain_area}
-                onChange={handleChange('constrain_area')}
-                name="constrain_area"
-                inputProps={{ 'aria-label': 'primary checkbox' }}
-              />} label="Constrain Area?" //labelPlacement="top"
+            <TextField
+              label="Minimum Area"
+              name="A_cs_min"
+              value={values.A_cs_min}
+              onChange={handleChange('A_cs_min')}
+              type="text"
+              inputProps={{
+                pattern: "[+-]?([1-9]\\d*|0)?(\\.\\d*)?([Ee][+-]?\\d+)?",
+              }}
+              className={classes.textField}
+              InputLabelProps={{
+                shrink: true,
+              }}
+              margin="normal"
             />
             <br/>
-            <FormControlLabel control={
-              <Switch
-                checked={values.constrain_moment}
-                onChange={handleChange('constrain_moment')}
-                name="constrain_moment"
-                inputProps={{ 'aria-label': 'primary checkbox' }}
-              />} label="Constrain Moment?" //labelPlacement="top"
+            <TextField
+              label="Maximum Absolute Cm"
+              name="Cm_max"
+              value={values.Cm_max}
+              onChange={handleChange('Cm_max')}
+              type="text"
+              inputProps={{
+                pattern: "[+-]?([1-9]\\d*|0)?(\\.\\d*)?([Ee][+-]?\\d+)?",
+              }}
+              className={classes.textField}
+              InputLabelProps={{
+                shrink: true,
+              }}
+              margin="normal"
             />
           </Paper>
           <Paper
