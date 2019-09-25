@@ -5,10 +5,10 @@ import {
   createMuiTheme,
   Fab,
   makeStyles,
-  Paper,
   Toolbar,
   Typography,
-  Grid, useTheme,
+  Grid,
+  useTheme,
 } from "@material-ui/core";
 import { ThemeProvider } from '@material-ui/styles';
 import AddIcon from "@material-ui/icons/Add";

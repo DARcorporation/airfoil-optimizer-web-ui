@@ -7,7 +7,8 @@ import {
   CardContent,
   CardMedia,
   makeStyles,
-  Typography, Container, Paper,
+  Paper,
+  Typography,
 } from "@material-ui/core";
 
 const useStyles = makeStyles(theme => ({
