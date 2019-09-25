@@ -384,7 +384,7 @@ class AfOptModel(om.Group):
         ivc = om.IndepVarComp()
         ivc.add_output("a_c", val=np.zeros(n_c))
         ivc.add_output("a_t", val=np.zeros(n_t))
-        ivc.add_output("t_te", val=0.0)
+        ivc.add_output("t_te", val=self.options["t_te_min"])
         ivc.add_output("Re", val=1e6)
         ivc.add_output("M", val=0.0)
         ivc.add_output("Cl_des", val=1.0)
@@ -623,15 +623,8 @@ def main(
     prob.driver = get_de_driver(gen, tolx, tolf, seed)
     prob.setup()
 
-    # Set the reference airfoil as initial conditions
-    prob["a_c"], prob["a_t"], prob["t_te"] = coords2cst(
-        x_ref, y_u_ref, y_l_ref, n_c, n_t
-    )
     # Set reference values
     prob["Cl_des"] = cl
-
-    # Run model once to get a consistent starting point
-    prob.run_model()
 
     # Optimize the problem using a genetic algorithm
     t0 = time.time()
