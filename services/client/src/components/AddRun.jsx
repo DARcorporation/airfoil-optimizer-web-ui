@@ -30,7 +30,7 @@ const useStyles = makeStyles(theme => ({
   },
   paper: {
     padding: theme.spacing(2),
-    margin: theme.spacing(2),
+    margin: theme.spacing(3),
   }
 }));
 
@@ -104,21 +104,22 @@ export default function AddRun(props) {
 
   return (
     <Dialog
+      fullWidth={true}
+      maxWidth="sm"
       className={classes.dialog}
       open={open}
       onClose={handleClose}
       scroll="paper"
-      aria-labelledby="scroll-dialog-title"
     >
-      <DialogTitle id="scroll-dialog-title">Submit New Run</DialogTitle>
+      <DialogTitle>Submit New Run</DialogTitle>
         <DialogContent dividers={true}>
           <form onSubmit={(event) => addRun(event)} id="add-run-form">
             <Paper
               container="true"
               className={classes.paper}
             >
-              <Typography variant="h6">Basic Problem Setup</Typography>
-              <br/>
+              <Typography variant="subtitle1">Basic Problem Setup</Typography>
+              <hr/>
               <TextField
                 label="Design Lift Coefficient"
                 name="cl"
@@ -218,8 +219,8 @@ export default function AddRun(props) {
               container="true"
               className={classes.paper}
             >
-              <Typography variant="h6">Number of Design Variables</Typography>
-              <br/>
+              <Typography variant="subtitle1">Number of Design Variables</Typography>
+              <hr/>
               <TextField
                 label="Mean Chord Line"
                 name="n_c"
@@ -258,8 +259,8 @@ export default function AddRun(props) {
               container="true"
               className={classes.paper}
             >
-              <Typography variant="h6">Termination Settings</Typography>
-              <br/>
+              <Typography variant="subtitle1">Termination Settings</Typography>
+              <hr/>
               <TextField
                 label="Number of Generations"
                 name="gen"
@@ -315,7 +316,8 @@ export default function AddRun(props) {
               container="true"
               className={classes.paper}
             >
-              <Typography variant="h6">Miscellaneous</Typography>
+              <Typography variant="subtitle1">Miscellaneous</Typography>
+              <hr/>
               <TextField
                 label="Number of Processors"
                 name="n_proc"
