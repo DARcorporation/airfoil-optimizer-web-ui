@@ -62,6 +62,12 @@ export default function AddRun(props) {
   });
   const [TELabel, setTELabel] = React.useState("TE Thickness");
   const [batch, setBatch] = React.useState(1);
+  const [expanded, setExpanded] = React.useState(false);
+
+  const handlePanelChange = panel => (event, newExpanded) => {
+    setExpanded(newExpanded ? panel : false);
+  };
+
 
   const handleChange = name => event => {
     if (['fix_te', 'report'].includes(name)) {
@@ -122,7 +128,7 @@ export default function AddRun(props) {
       <DialogTitle>Submit New Run</DialogTitle>
         <DialogContent dividers={true}>
           <form onSubmit={(event) => addRun(event)} id="add-run-form">
-            <ExpansionPanel>
+            <ExpansionPanel expanded={expanded === 'panel1'} onChange={handlePanelChange('panel1')}>
               <ExpansionPanelSummary
                 expandIcon={<ExpandMoreIcon />}
               >
@@ -227,7 +233,7 @@ export default function AddRun(props) {
                 </Container>
               </ExpansionPanelDetails>
             </ExpansionPanel>
-            <ExpansionPanel>
+            <ExpansionPanel expanded={expanded === 'panel2'} onChange={handlePanelChange('panel2')}>
               <ExpansionPanelSummary
                 expandIcon={<ExpandMoreIcon />}
               >
@@ -271,7 +277,7 @@ export default function AddRun(props) {
                 </Container>
               </ExpansionPanelDetails>
             </ExpansionPanel>
-            <ExpansionPanel>
+            <ExpansionPanel expanded={expanded === 'panel3'} onChange={handlePanelChange('panel3')}>
               <ExpansionPanelSummary
                 expandIcon={<ExpandMoreIcon />}
               >
@@ -332,7 +338,7 @@ export default function AddRun(props) {
                 </Container>
               </ExpansionPanelDetails>
             </ExpansionPanel>
-            <ExpansionPanel>
+            <ExpansionPanel expanded={expanded === 'panel4'} onChange={handlePanelChange('panel4')}>
               <ExpansionPanelSummary
                 expandIcon={<ExpandMoreIcon />}
               >
@@ -344,7 +350,7 @@ export default function AddRun(props) {
                 </Container>
               </ExpansionPanelDetails>
             </ExpansionPanel>
-            <ExpansionPanel>
+            <ExpansionPanel expanded={expanded === 'panel5'} onChange={handlePanelChange('panel5')}>
               <ExpansionPanelSummary
                 expandIcon={<ExpandMoreIcon />}
               >
