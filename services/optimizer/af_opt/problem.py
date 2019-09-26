@@ -597,8 +597,14 @@ def main(
         Minimum cross sectional area. None if unconstrained. Default is None.
     Cm_max : float or None, optional
         Maximum absolute moment coefficient. None if unconstrained. Default is None.
-    seed : int, optional
-        Seed to use for the random number generator which creates an initial population for the genetic algorithm
+    strategy : string, optional
+        Evolution strategy to use. Default is 'rand-to-best/1/exp/random'.
+    f : float or None, optional
+        Mutation rate
+    cr : float or None, optional
+        Crossover rate
+    adaptivity : 0, 1, or 2
+        Which kind of self-adaptivity to ue (0: none, 1: simple, 2: complex)
     repr_file, dat_file, png_file : str, optional
         Paths where the final representation, optimized airfoil coordinates, and output image should be saved.
     """

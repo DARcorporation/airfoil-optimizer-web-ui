@@ -47,6 +47,10 @@ def run(
         Number of CST coefficients for the chord line and thickness distribution, respectively
     gen : int, optional
         Number of generations to use for the genetic algorithm. 100 by default
+    tolx : float, optional
+        Tolerance on the spread of the design vectors.
+    tolf: float, optional
+        Tolerance on the spread of objective functions.
     fix_te : bool, optional
         True if the trailing edge thickness should be fixed. True by default
     t_te_min : float, optional
@@ -57,8 +61,14 @@ def run(
         Minimum cross sectional area. None if unconstrained. Default is None.
     Cm_max : float or None, optional
         Maximum absolute moment coefficient. None if unconstrained. Default is None.
-    seed : int, optional
-        Seed to use for the random number generator which creates an initial population for the genetic algorithm
+    strategy : string, optional
+        Evolution strategy to use. Default is 'rand-to-best/1/exp/random'.
+    f : float or None, optional
+        Mutation rate
+    cr : float or None, optional
+        Crossover rate
+    adaptivity : 0, 1, or 2
+        Which kind of self-adaptivity to ue (0: none, 1: simple, 2: complex)
     n_proc : int, optional
         Number of processors to use to evaluate functions in parallel using MPI. 28 by default
     run_name : str, optional
