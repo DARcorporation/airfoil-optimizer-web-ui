@@ -1,5 +1,5 @@
-import React, {useEffect} from 'react';
-import ReactDOM from 'react-dom';
+import React, {useEffect} from "react";
+import ReactDOM from "react-dom";
 import {
   AppBar,
   createMuiTheme,
@@ -10,37 +10,28 @@ import {
   Grid,
   useTheme,
 } from "@material-ui/core";
-import { ThemeProvider } from '@material-ui/styles';
+import { ThemeProvider } from "@material-ui/styles";
 import AddIcon from "@material-ui/icons/Add";
-import KeyboardArrowUpIcon from '@material-ui/icons/KeyboardArrowUp';
 import axios from "axios";
 
 import AddRun from "./components/AddRun";
 import Run from "./components/Run";
-import ScrollTop from "./components/ScrollTop";
 import "./index.scss"
 
 const useStyles = makeStyles(theme => ({
   root: {
-    paddingBottom: theme.spacing(3),
+    margin: 0,
+    padding: theme.spacing(1),
   },
   fab: {
-    position: 'absolute',
-    zIndex: 1,
-    top: 30,
-    left: 'auto',
-    right: 30,
-    margin: '0 auto',
+    position: "fixed",
+    bottom: theme.spacing(2),
+    right: theme.spacing(2),
   },
   appBar: {
     top: 0,
-    bottom: 'auto',
+    bottom: "auto",
   },
-  paper: {
-    marginTop: -50,
-    paddingTop: 50,
-    paddingBottom: theme.spacing(3),
-  }
 }));
 
 const App = (props) => {
@@ -74,19 +65,11 @@ const App = (props) => {
   };
 
   return (
-    <section className="section">
+    <section className={classes.root}>
       <AddRun open={addRunOpen} onClose={handleClose}/>
       <AppBar className={classes.appBar}>
         <Toolbar>
           <Typography variant="h6">Optimization Runs</Typography>
-          <Fab
-            color="secondary"
-            aria-label="add"
-            className={classes.fab}
-            onClick={handleClickOpen}
-          >
-            <AddIcon/>
-          </Fab>
         </Toolbar>
       </AppBar>
       <Toolbar id="back-to-top-anchor" />
@@ -101,18 +84,21 @@ const App = (props) => {
           </Grid>
         ))}
       </Grid>
-      <ScrollTop {...props}>
-        <Fab color="secondary" size="small" aria-label="scroll back to top">
-          <KeyboardArrowUpIcon />
-        </Fab>
-      </ScrollTop>
+      <Fab
+        color="secondary"
+        aria-label="add"
+        className={classes.fab}
+        onClick={handleClickOpen}
+      >
+        <AddIcon/>
+      </Fab>
     </section>
   );
 };
 
 const theme = createMuiTheme({
   palette: {
-    type: 'light',
+    type: "light",
   },
 });
 
@@ -126,5 +112,5 @@ const ThemedApp  = () => {
 
 ReactDOM.render(
   <ThemedApp />,
-  document.getElementById('root')
+  document.getElementById("root")
 );

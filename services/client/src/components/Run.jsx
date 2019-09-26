@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   Button,
   Card,
@@ -13,8 +13,8 @@ import {
 
 const useStyles = makeStyles(theme => ({
   card: {
-    maxWidth: 345,
-    margin: theme.spacing(2),
+    // maxWidth: 345,
+    margin: theme.spacing(1),
   },
   media: {
     height: 50,
@@ -34,9 +34,9 @@ export default function Run(props) {
           title="Optimization Run"
           style={
             {
-              backgroundColor: run.status === 0 ? 'lightblue' : (
-                run.status === 1 ? 'orange' : (
-                  run.status === 2 ? 'lightgreen' : 'red'
+              backgroundColor: run.status === 0 ? "lightblue" : (
+                run.status === 1 ? "orange" : (
+                  run.status === 2 ? "lightgreen" : "red"
                 )
               )
             }
@@ -45,14 +45,13 @@ export default function Run(props) {
           <Paper />
         </CardMedia>
         <CardContent>
-          <Typography gutterBottom variant="h5" component="h2">
+          <Typography gutterBottom variant="body1" component="body1">
             Optimization Run
           </Typography>
           <Typography variant="body2" color="textSecondary" component="p">
-            Run status:
             {run.status === 0 && " In Queue"}
             {run.status === 1 && " Running..."}
-            {run.status === 2 && " Completed..."}
+            {run.status === 2 && " Completed"}
             {![0, 1, 2].includes(run.status) && " Failed"}
             <br/>
           </Typography>
