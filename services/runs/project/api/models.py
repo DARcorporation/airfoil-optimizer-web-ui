@@ -16,6 +16,7 @@ class Run(db.Model):
     t_c_min = db.Column(db.Float(), nullable=True, default=0.01)
     A_cs_min = db.Column(db.Float(), nullable=True, default=None)
     Cm_max = db.Column(db.Float(), nullable=True, default=None)
+    strategy = db.Column(db.String(), default="rand-to-best/1/exp/random", nullable=False)
     f = db.Column(db.Float(), default=None, nullable=True)
     cr = db.Column(db.Float(), default=None, nullable=True)
     adaptivity = db.Column(db.Integer(), default=2, nullable=False)
@@ -37,6 +38,7 @@ class Run(db.Model):
         A_cs_min=None,
         Cm_max=None,
         cm_ref=None,
+        strategy="rand-to-best/1/exp/random",
         f=None,
         cr=None,
         adaptivity=2,
@@ -57,6 +59,7 @@ class Run(db.Model):
         self.A_cs_min = A_cs_min
         self.Cm_max = Cm_max
         self.cm_ref = cm_ref
+        self.strategy = strategy
         self.f = f
         self.cr = cr
         self.adaptivity = adaptivity

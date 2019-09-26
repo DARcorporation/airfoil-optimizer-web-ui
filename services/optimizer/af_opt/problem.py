@@ -458,10 +458,11 @@ class AfOptModel(om.Group):
         return yaml
 
 
-def get_de_driver(gen=100, tolx=1e-8, tolf=1e-8, f=None, cr=None, adaptivity=2):
+def get_de_driver(gen=100, tolx=1e-8, tolf=1e-8, strategy="rand-to-best/1/exp/random", f=None, cr=None, adaptivity=2):
     kwargs = dict(
         run_parallel=run_parallel, adaptivity=adaptivity,
         max_gen=gen, tolx=tolx, tolf=tolf,
+        strategy=strategy,
         show_progress=True
     )
     if f is not None:
@@ -563,6 +564,7 @@ def main(
     t_c_min=0.01,
     A_cs_min=None,
     Cm_max=None,
+    strategy="rand-to-best/1/exp/random",
     f=None,
     cr=None,
     adaptivity=2,
@@ -614,7 +616,7 @@ def main(
     prob = om.Problem()
     prob.model = AfOptModel(**kwargs)
 
-    prob.driver = get_de_driver(gen, tolx, tolf, f, cr, adaptivity)
+    prob.driver = get_de_driver(gen, tolx, tolf, strategy, f, cr, adaptivity)
     prob.setup()
 
     # Set reference values
@@ -649,7 +651,7 @@ def main(
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 18:
+    if len(sys.argv) == 19:
         main(
             cl=float(sys.argv[1]),
             n_c=int(sys.argv[2]),
@@ -662,12 +664,13 @@ if __name__ == "__main__":
             t_c_min=None if sys.argv[9] == "None" else float(sys.argv[9]),
             A_cs_min=None if sys.argv[10] == "None" else float(sys.argv[10]),
             Cm_max=None if sys.argv[11] == "None" else float(sys.argv[11]),
-            f=None if sys.argv[12] == "None" else float(sys.argv[12]),
-            cr=None if sys.argv[13] == "None" else float(sys.argv[13]),
-            adaptivity=int(sys.argv[14]),
-            repr_file=sys.argv[15],
-            dat_file=sys.argv[16],
-            png_file=sys.argv[17],
+            strategy=sys.argv[12],
+            f=None if sys.argv[13] == "None" else float(sys.argv[13]),
+            cr=None if sys.argv[14] == "None" else float(sys.argv[14]),
+            adaptivity=int(sys.argv[15]),
+            repr_file=sys.argv[16],
+            dat_file=sys.argv[17],
+            png_file=sys.argv[18],
         )
     else:
         main(1.0, 3, 3, gen=9)

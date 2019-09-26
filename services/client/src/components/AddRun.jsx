@@ -12,10 +12,15 @@ import {
   ExpansionPanel,
   ExpansionPanelDetails,
   ExpansionPanelSummary,
+  FormControl,
   FormControlLabel,
+  Grid,
+  InputLabel,
+  Select,
+  MenuItem,
   Switch,
   TextField,
-  Typography
+  Typography, Tooltip, Paper
 } from "@material-ui/core";
 import ExpandMoreIcon from "@material-ui/icons/ExpandMore"
 
@@ -39,7 +44,17 @@ const useStyles = makeStyles(theme => ({
   paper: {
     padding: theme.spacing(2),
     margin: theme.spacing(3),
-  }
+  },
+  strategyFormControl: {
+    fullWidth: true,
+  },
+  formControl: {
+    margin: theme.spacing(2),
+    minWidth: 200,
+  },
+  tooltipWidth: {
+    maxWidth: 160,
+  },
 }));
 
 export default function AddRun(props) {
@@ -57,6 +72,13 @@ export default function AddRun(props) {
     t_c_min: 0.01,
     A_cs_min: '',
     Cm_max: '',
+    sMutation: 'rand',
+    sNumber: '1',
+    sCrossover: 'exp',
+    sRepair: 'clip',
+    adaptivity: 2,
+    f: 0.85,
+    cr: 1.0,
     n_proc: 28,
     report: false,
   });
@@ -105,6 +127,10 @@ export default function AddRun(props) {
       t_c_min: values.t_c_min ? Number(values.t_c_min) : null,
       A_cs_min: values.A_cs_min ? Number(values.A_cs_min) : null,
       Cm_max: values.Cm_max ? Number(values.Cm_max) : null,
+      adaptivity: values.adaptivity,
+      f: values.adaptivity === 0 ? values.f : null,
+      cr: values.adaptivity === 0 ? values.cr : null,
+      strategy: [values.sMutation, values.sNumber, values.sCrossover, values.sRepair].join("/"),
       n_proc: values.n_proc,
       report: values.report,
     };
@@ -346,7 +372,133 @@ export default function AddRun(props) {
               </ExpansionPanelSummary>
               <ExpansionPanelDetails>
                 <Container>
-
+                  <Typography variant="body2" component="body2">Evolution Strategy</Typography>
+                  <br/>
+                  <Grid container xs={12} justify="center">
+                    <Grid key="mutation" item xs={4}>
+                      <FormControl variant="outlined" fullWidth={true}>
+                        <Select
+                          value={values.sMutation}
+                          onChange={handleChange('sMutation')}
+                        >
+                          <MenuItem value='rand'>rand</MenuItem>
+                          <MenuItem value='best'>rand</MenuItem>
+                          <MenuItem value='rand-to-best'>rand-to-best</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                    <Grid key="number" item xs={2}>
+                      <FormControl variant="outlined" fullWidth={true}>
+                        <Select
+                          value={values.sNumber}
+                          onChange={handleChange('sNumber')}
+                        >
+                          <MenuItem value='1'>1</MenuItem>
+                          <MenuItem value='2'>2</MenuItem>
+                          <MenuItem value='3'>3</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                    <Grid key="crossover" item xs={3}>
+                      <FormControl variant="outlined" fullWidth={true}>
+                        <Select
+                          value={values.sCrossover}
+                          onChange={handleChange('sCrossover')}
+                        >
+                          <MenuItem value='bin'>bin</MenuItem>
+                          <MenuItem value='exp'>exp</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                    <Grid key="repair" item xs={3}>
+                      <FormControl variant="outlined" fullWidth={true}>
+                        <Select
+                          value={values.sRepair}
+                          onChange={handleChange('sRepair')}
+                        >
+                          <MenuItem value='random'>random</MenuItem>
+                          <MenuItem value='clip'>clip</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                  </Grid>
+                  <br/>
+                  <FormControl variant="outlined" className={classes.formControl}>
+                    <InputLabel>Self-Adaptivity</InputLabel>
+                    <Select
+                      value={values.adaptivity}
+                      onChange={handleChange('adaptivity')}
+                    >
+                      <Tooltip
+                        title="The Mutation and Crossover Rates are kept fixed at the specified values."
+                        value={0}
+                        placement="left"
+                        classes={{ tooltip: classes.tooltipWidth }}
+                      >
+                        <MenuItem value={0}>No Adaptivity</MenuItem>
+                      </Tooltip>
+                      <Tooltip
+                        title="Simple Adaptivity uses a Monte-Carlo search to find the optimal Mutation and Crossover
+                        Rates during the course of the optimization."
+                        value={1}
+                        placement="left"
+                        classes={{ tooltip: classes.tooltipWidth }}
+                      >
+                        <MenuItem value={1}>Simple Adaptivity</MenuItem>
+                      </Tooltip>
+                      <Tooltip
+                        title="Complex Adaptivity mutates the Mutation and Crossover Rates with the same mutation
+                        strategy as the population."
+                        value={2}
+                        placement="left"
+                        classes={{ tooltip: classes.tooltipWidth }}
+                      >
+                        <MenuItem value={2}>Complex Adaptvity</MenuItem>
+                      </Tooltip>
+                    </Select>
+                  </FormControl>
+                  <br/>
+                  {values.adaptivity === 0 &&
+                    <React.Fragment>
+                      <TextField
+                        label="Mutation Rate"
+                        name="f"
+                        value={values.f}
+                        onChange={handleChange('f')}
+                        type="number"
+                        inputProps={{
+                          min: 0,
+                          max: 1,
+                          step: 0.001,
+                        }}
+                        className={classes.textField}
+                        InputLabelProps={{
+                          shrink: true,
+                        }}
+                        margin="normal"
+                        variant="outlined"
+                      />
+                      <br/>
+                      <TextField
+                        label="Crossover Rate"
+                        name="cr"
+                        value={values.cr}
+                        onChange={handleChange('cr')}
+                        type="number"
+                        inputProps={{
+                          min: 0,
+                          max: 1,
+                          step: 0.001,
+                        }}
+                        className={classes.textField}
+                        InputLabelProps={{
+                          shrink: true,
+                        }}
+                        margin="normal"
+                        variant="outlined"
+                      />
+                    </React.Fragment>
+                  }
                 </Container>
               </ExpansionPanelDetails>
             </ExpansionPanel>
