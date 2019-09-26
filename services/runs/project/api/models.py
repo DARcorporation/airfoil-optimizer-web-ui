@@ -16,7 +16,9 @@ class Run(db.Model):
     t_c_min = db.Column(db.Float(), nullable=True, default=0.01)
     A_cs_min = db.Column(db.Float(), nullable=True, default=None)
     Cm_max = db.Column(db.Float(), nullable=True, default=None)
-    seed = db.Column(db.Integer(), nullable=True)
+    f = db.Column(db.Float(), default=None, nullable=True)
+    cr = db.Column(db.Float(), default=None, nullable=True)
+    adaptivity = db.Column(db.Integer(), default=2, nullable=False)
     n_proc = db.Column(db.Integer(), nullable=False, default=28)
     report = db.Column(db.Boolean(), nullable=False, default=False)
     status = db.Column(db.Integer(), nullable=False, default=0)
@@ -35,7 +37,9 @@ class Run(db.Model):
         A_cs_min=None,
         Cm_max=None,
         cm_ref=None,
-        seed=None,
+        f=None,
+        cr=None,
+        adaptivity=2,
         n_proc=28,
         run_name=None,
         report=False,
@@ -53,7 +57,9 @@ class Run(db.Model):
         self.A_cs_min = A_cs_min
         self.Cm_max = Cm_max
         self.cm_ref = cm_ref
-        self.seed = seed
+        self.f = f
+        self.cr = cr
+        self.adaptivity = adaptivity
         self.n_proc = n_proc
         self.report = report
 

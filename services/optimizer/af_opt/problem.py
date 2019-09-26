@@ -8,7 +8,6 @@ from datetime import timedelta
 from differential_evolution import DifferentialEvolutionDriver
 from multiprocessing import TimeoutError
 from multiprocessing.pool import ThreadPool
-from random import SystemRandom
 from xfoil import XFoil
 from xfoil.model import Airfoil
 
@@ -459,10 +458,18 @@ class AfOptModel(om.Group):
         return yaml
 
 
-def get_de_driver(gen=100, tolx=1e-8, tolf=1e-8, seed=None):
-    driver = DifferentialEvolutionDriver(run_parallel=run_parallel,
-                                         max_gen=gen, tolx=tolx, tolf=tolf,
-                                         show_progress=True)
+def get_de_driver(gen=100, tolx=1e-8, tolf=1e-8, f=None, cr=None, adaptivity=2):
+    kwargs = dict(
+        run_parallel=run_parallel, adaptivity=adaptivity,
+        max_gen=gen, tolx=tolx, tolf=tolf,
+        show_progress=True
+    )
+    if f is not None:
+        kwargs.update({"Pm": f})
+    if cr is not None:
+        kwargs.update({"Pc": cr})
+
+    driver = DifferentialEvolutionDriver(**kwargs)
     return driver
 
 
@@ -556,7 +563,9 @@ def main(
     t_c_min=0.01,
     A_cs_min=None,
     Cm_max=None,
-    seed=None,
+    f=None,
+    cr=None,
+    adaptivity=2,
     repr_file="repr.yml",
     dat_file="optimized.dat",
     png_file="optimized.png",
@@ -605,7 +614,7 @@ def main(
     prob = om.Problem()
     prob.model = AfOptModel(**kwargs)
 
-    prob.driver = get_de_driver(gen, tolx, tolf, seed)
+    prob.driver = get_de_driver(gen, tolx, tolf, f, cr, adaptivity)
     prob.setup()
 
     # Set reference values
@@ -640,7 +649,7 @@ def main(
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 16:
+    if len(sys.argv) == 18:
         main(
             cl=float(sys.argv[1]),
             n_c=int(sys.argv[2]),
@@ -653,10 +662,12 @@ if __name__ == "__main__":
             t_c_min=None if sys.argv[9] == "None" else float(sys.argv[9]),
             A_cs_min=None if sys.argv[10] == "None" else float(sys.argv[10]),
             Cm_max=None if sys.argv[11] == "None" else float(sys.argv[11]),
-            seed=None if sys.argv[12] == "None" else int(sys.argv[12]),
-            repr_file=sys.argv[13],
-            dat_file=sys.argv[14],
-            png_file=sys.argv[15],
+            f=None if sys.argv[12] == "None" else float(sys.argv[12]),
+            cr=None if sys.argv[13] == "None" else float(sys.argv[13]),
+            adaptivity=int(sys.argv[14]),
+            repr_file=sys.argv[15],
+            dat_file=sys.argv[16],
+            png_file=sys.argv[17],
         )
     else:
         main(1.0, 3, 3, gen=9)
