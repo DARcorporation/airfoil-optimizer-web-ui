@@ -1,5 +1,6 @@
 import configparser
 import datetime
+import json
 import os
 import requests
 import smtplib
@@ -191,22 +192,26 @@ def main():
     host = os.environ["RUNS_SERVICE_URL"]
 
     while True:
-        r = requests.get(f"{host}/runs/accept")
-        if r.status_code == 204:
-            time.sleep(1)
-            continue
-
-        response_object = r.json()
-        id = response_object["data"]["id"]
-
-        kwargs = dict(response_object["data"])
-        del kwargs["id"]
-        del kwargs["status"]
-        print(f"Got a request to start a run with the following data: \n{kwargs}")
-
         try:
+            r = requests.get(f"{host}/runs/accept")
+            if r.status_code == 204:
+                time.sleep(1)
+                continue
+
+            response_object = r.json()
+            id = response_object["data"]["id"]
+
+            kwargs = dict(response_object["data"])
+            del kwargs["id"]
+            del kwargs["status"]
+            print(f"Got a request to start a run with the following data: \n{kwargs}")
+
             run(**kwargs)
             requests.post(f"{host}/runs/complete", json={"id": id, "success": True})
+        except requests.exceptions.ConnectionError as e:
+            pass
+        except json.decoder.JSONDecodeError:
+            print(f"Invalid response from server: {r}")
         except TypeError:
             print("Invalid run case")
             requests.post(f"{host}/runs/complete", json={"id": id, "success": False})
