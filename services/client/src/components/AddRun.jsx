@@ -382,7 +382,7 @@ export default function AddRun(props) {
                           onChange={handleChange('sMutation')}
                         >
                           <MenuItem value='rand'>rand</MenuItem>
-                          <MenuItem value='best'>rand</MenuItem>
+                          <MenuItem value='best'>best</MenuItem>
                           <MenuItem value='rand-to-best'>rand-to-best</MenuItem>
                         </Select>
                       </FormControl>
