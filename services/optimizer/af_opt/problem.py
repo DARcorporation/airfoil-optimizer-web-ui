@@ -1,6 +1,5 @@
 import numpy as np
 import openmdao.api as om
-import os
 import sys
 import time
 
@@ -29,25 +28,6 @@ else:
     run_parallel = True
     rank = MPI.COMM_WORLD.rank
     n_proc = MPI.COMM_WORLD.size
-
-# Numpy string formatters
-array_formatter = {"float_kind": "{: 7.4f}".format}
-
-# Reference airfoil coordinates
-file_path = os.path.abspath(os.path.dirname(__file__))
-coords_file = os.path.join(file_path, "naca0012.dat")
-coords_ref = np.loadtxt(coords_file, skiprows=1)
-
-# Reference airfoil coordinates split between upper and lower surfaces
-i_0_ref = np.argmin(coords_ref[:, 0])
-coords_ref_u = np.flipud(coords_ref[: i_0_ref + 1, :])
-coords_ref_l = coords_ref[i_0_ref:, :]
-t_te_ref = coords_ref_u[-1, 1] - coords_ref_l[-1, 1]
-
-# Upper and lower reference airfoil y-coordinates sampled at identical x-coordinates
-x_ref = coords_ref_u[:, 0]
-y_u_ref = coords_ref_u[:, 1]
-y_l_ref = np.interp(x_ref, coords_ref_l[:, 0], coords_ref_l[:, 1])
 
 
 def coords2cst(x, y_u, y_l, n_c, n_t):
@@ -269,6 +249,8 @@ class XFoilComp(AirfoilComponent):
     """
     Computes the drag coefficient of an airfoil at a given lift coefficient, Reynolds nr., and Mach nr.
     """
+    # Numpy string formatter
+    array_formatter = {"float_kind": "{: 7.4f}".format}
 
     def initialize(self):
         super().initialize()
@@ -320,12 +302,12 @@ class XFoilComp(AirfoilComponent):
                 f"{rank:02d} :: "
                 + "a_c: {}, ".format(
                     np.array2string(
-                        inputs["a_c"], separator=", ", formatter=array_formatter
+                        inputs["a_c"], separator=", ", formatter=self.array_formatter
                     )
                 )
                 + "a_t: {}, ".format(
                     np.array2string(
-                        inputs["a_t"], separator=", ", formatter=array_formatter
+                        inputs["a_t"], separator=", ", formatter=self.array_formatter
                     )
                 )
                 + f't_te: {inputs["t_te"][0]: 6.4f}, '
