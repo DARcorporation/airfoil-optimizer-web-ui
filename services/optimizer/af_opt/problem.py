@@ -124,17 +124,8 @@ def xfoil_worker(xf, cl_spec, consistency_check=True, consistency_tol=1e-4):
     e = np.abs(cd2 - cd1)
     if e < consistency_tol:
         return cd1, cm1
-
-    xf.reset_bls()
-    _, cd3, cm3, _ = xf.cl(cl_spec)
-
-    if np.abs(cd3 - cd1) < consistency_tol:
-        return cd1, cm1
-
-    if np.abs(cd3 - cd2) < consistency_tol:
-        return cd2, cm2
-
-    return np.nan, np.nan
+    else:
+        return np.nan, np.nan
 
 
 def analyze_airfoil(
