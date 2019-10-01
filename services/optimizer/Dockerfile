@@ -18,9 +18,9 @@ COPY ./requirements.txt /tmp/requirements.txt
 RUN pip3 install --upgrade -r requirements.txt
 
 # Install XFOIL
-RUN wget -O xfoil.tar.gz https://github.com/daniel-de-vries/xfoil-python/archive/1.0.3.tar.gz && \
+RUN wget -O xfoil.tar.gz https://github.com/daniel-de-vries/xfoil-python/archive/1.1.0.tar.gz && \
     tar -xzf xfoil.tar.gz && \
-    pip3 install ./xfoil-python-1.0.3 && \
+    pip3 install ./xfoil-python-1.1.0 && \
     rm -rf /tmp/* && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
