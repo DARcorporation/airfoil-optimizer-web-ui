@@ -179,13 +179,13 @@ def analyze_airfoil(
         xf.Re = rey
         xf.M = mach
         xf.max_iter = 200
+        xf.reset_bls()
 
         cd = np.nan
         cm = np.nan
         future = pool.apply_async(xfoil_worker, args=(xf, cl))
         try:
             cd, cm = future.get(timeout=5.0)
-            xf.reset_bls()
         except TimeoutError:
             pass
 
