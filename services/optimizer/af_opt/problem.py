@@ -3,6 +3,7 @@ import openmdao.api as om
 import sys
 import time
 
+from cst import cst, fit
 from datetime import timedelta
 from differential_evolution import DifferentialEvolutionDriver
 from multiprocessing import TimeoutError
@@ -10,7 +11,6 @@ from multiprocessing.pool import ThreadPool
 from xfoil import XFoil
 from xfoil.model import Airfoil
 
-from .cst import cst, fit
 from .util import cosspace
 
 # Ensure MPI is defined
@@ -345,10 +345,10 @@ class AfOptModel(om.Group):
         n_t = self.options["n_t"]
 
         # Design variable bounds
-        a_c_lower = -np.ones(n_c)
-        a_c_upper = np.ones(n_c)
-        a_t_lower = 0.01 * np.ones(n_t)
-        a_t_upper = 0.6 * np.ones(n_t)
+        a_c_lower = -0.25 * np.ones(n_c)
+        a_c_upper = +0.25 * np.ones(n_c)
+        a_t_lower = +0.01 * np.ones(n_t)
+        a_t_upper = +0.20 * np.ones(n_t)
         t_te_upper = 0.1
 
         # Independent variables
