@@ -605,9 +605,6 @@ def main(
     prob.run_driver()
     dt = time.time() - t0
 
-    # Run model one more time to ensure consistency
-    prob.run_model()
-
     # Show and write final results
     if rank == 0:
         yaml = prob.model.__repr__()
