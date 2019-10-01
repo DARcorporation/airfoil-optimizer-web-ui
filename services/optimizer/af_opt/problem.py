@@ -174,8 +174,7 @@ def analyze_airfoil(
         xf.airfoil = Airfoil(
             x=np.concatenate((x[-1:0:-1], x)), y=np.concatenate((y_u[-1:0:-1], y_l))
         )
-        # xf.repanel(n_nodes=300, cv_par=2.0, cte_ratio=0.5)
-        xf.repanel(n_nodes=240)
+        xf.repanel(n_nodes=240, cv_par=2.0, cte_ratio=0.5)
         xf.Re = rey
         xf.M = mach
         xf.max_iter = 200
