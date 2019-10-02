@@ -90,7 +90,7 @@ def cst2coords(a_c, a_t, t_te, n_coords=100):
     return x, y_u, y_l, y_c, t
 
 
-def xfoil_worker(xf, cl_spec, consistency_check=True, consistency_tol=1e-4):
+def xfoil_worker(xf, cl_spec, consistency_check=True):
     """
     Try to operate the given XFoil instance at a specified lift coefficient.
 
@@ -106,26 +106,36 @@ def xfoil_worker(xf, cl_spec, consistency_check=True, consistency_tol=1e-4):
         will be run a third time. It is expected that two out of three results will agree. The third will be considered
         incorrect and discarded. If the first run returns NaN, the airfoil will be assumed unrealistic and it will not
         be run a second time.
-    consistency_tol : float, optional
-        Tolerance used for the consistency check. 1e-4 by default
 
     Returns
     -------
     cd, cm : float or np.nan
         Drag and moment coefficients or nan if analysis did not complete successfully
+
+    Notes
+    -----
+    The consistency check works as follows. Each airfoil is analyzed twice. First with a standard panel distribution,
+    then with a panel distribution which is refined around the leading edge. If the two results are within 5%, the
+    average result is returned. Otherwise, the larger of the two results is returned to be conservative.
     """
+    xf.repanel(n_nodes=240)
+    xf.reset_bls()
     _, cd1, cm1, _ = xf.cl(cl_spec)
     if np.isnan(cd1) or not consistency_check:
         return cd1, cm1
 
+    xf.repanel(n_nodes=240, cv_par=2.0, cte_ratio=0.5)
     xf.reset_bls()
     _, cd2, cm2, _ = xf.cl(cl_spec)
 
-    e = np.abs(cd2 - cd1)
-    if e < consistency_tol:
-        return cd1, cm1
+    e = np.abs(cd2 - cd1) / cd1
+    if e < 0.05:
+        return (cd1 + cd2) / 2., (cm1 + cm2) / 2.
     else:
-        return np.nan, np.nan
+        if cd1 > cd2:
+            return cd1, cm1
+        else:
+            return cd2, cm2
 
 
 def analyze_airfoil(
@@ -174,11 +184,9 @@ def analyze_airfoil(
         xf.airfoil = Airfoil(
             x=np.concatenate((x[-1:0:-1], x)), y=np.concatenate((y_u[-1:0:-1], y_l))
         )
-        xf.repanel(n_nodes=240, cv_par=2.0, cte_ratio=0.5)
         xf.Re = rey
         xf.M = mach
         xf.max_iter = 200
-        xf.reset_bls()
 
         cd = np.nan
         cm = np.nan
