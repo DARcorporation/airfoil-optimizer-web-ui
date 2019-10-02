@@ -110,16 +110,8 @@ def analyze_airfoil(
         )
         xf.Re = rey
         xf.M = mach
-        xf.max_iter = 200
-
-        cd = np.nan
-        cm = np.nan
-        future = pool.apply_async(xfoil_worker, args=(xf, cl))
-        try:
-            cd, cm = future.get(timeout=10.0)
-        except TimeoutError:
-            # TODO: See if there's any way to handle this gracefully.
-            exit(-1)
+        xf.max_iter = 100
+        cd, cm = pool.apply(xfoil_worker, args=(xf, cl))
 
     if clean_xf:
         del xf
