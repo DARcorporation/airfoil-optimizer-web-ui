@@ -77,6 +77,7 @@ def run(
     report : bool, optional
         True if the results should be reported via email.
     """
+    returncode = -1
     try:
         if run_name is None:
             now = datetime.datetime.utcnow()
@@ -130,8 +131,8 @@ def run(
                 sys.stdout.write(line.decode("utf-8"))
                 log.write(line)
 
-                if process.poll() is not None:
-                    break
+            process.communicate()
+            returncode = process.returncode
 
         if report:
             print("Going to send an email")
@@ -184,6 +185,8 @@ def run(
     except Exception as e:
         print(e)
 
+    return returncode
+
 
 def main():
     """
@@ -206,8 +209,9 @@ def main():
             del kwargs["status"]
             print(f"Got a request to start a run with the following data: \n{kwargs}")
 
-            run(**kwargs)
-            requests.post(f"{host}/runs/complete", json={"id": id, "success": True})
+            returncode = run(**kwargs)
+            print(f"Returncode: {returncode}")
+            requests.post(f"{host}/runs/complete", json={"id": id, "success": returncode == 0})
         except requests.exceptions.ConnectionError as e:
             pass
         except json.decoder.JSONDecodeError:
