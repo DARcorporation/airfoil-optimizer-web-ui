@@ -54,7 +54,7 @@ def xfoil_worker(xf, cl_spec, consistency_check=True):
 
     e = np.abs(cd2 - cd1) / cd1
     if e < 0.05:
-        return (cd1 + cd2) / 2., (cm1 + cm2) / 2.
+        return (cd1 + cd2) / 2.0, (cm1 + cm2) / 2.0
     else:
         if cd1 > cd2:
             return cd1, cm1
@@ -125,6 +125,7 @@ class XFoilComp(AirfoilComponent):
     """
     Computes the drag coefficient of an airfoil at a given lift coefficient, Reynolds nr., and Mach nr.
     """
+
     # Numpy string formatter
     array_formatter = {"float_kind": "{: 7.4f}".format}
 

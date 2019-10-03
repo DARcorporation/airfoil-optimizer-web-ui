@@ -17,12 +17,23 @@ from .model import AfOptModel
 from .recorders import PopulationReporter
 
 
-def get_de_driver(gen=100, tolx=1e-8, tolf=1e-8, strategy="rand-to-best/1/exp/random", f=None, cr=None, adaptivity=2):
+def get_de_driver(
+    gen=100,
+    tolx=1e-8,
+    tolf=1e-8,
+    strategy="rand-to-best/1/exp/random",
+    f=None,
+    cr=None,
+    adaptivity=2,
+):
     kwargs = dict(
-        run_parallel=run_parallel, adaptivity=adaptivity,
-        max_gen=gen, tolx=tolx, tolf=tolf,
+        run_parallel=run_parallel,
+        adaptivity=adaptivity,
+        max_gen=gen,
+        tolx=tolx,
+        tolf=tolf,
         strategy=strategy,
-        show_progress=True
+        show_progress=True,
     )
     if f is not None:
         kwargs.update({"Pm": f})
@@ -81,13 +92,13 @@ def plot(prob, display=False):
     x, y_u, y_l, y_c, _ = cst2coords(prob["a_c"], prob["a_t"], prob["t_te"])
     ax.plot(x, y_u, "k", x, y_l, "k", x, y_c, "k--")
     ax.axis("scaled")
-    ax.set_xlabel('x/c')
-    ax.set_ylabel('y/c')
+    ax.set_xlabel("x/c")
+    ax.set_ylabel("y/c")
     ax.xaxis.set_major_locator(MultipleLocator(0.2))
     ax.xaxis.set_minor_locator(MultipleLocator(0.05))
     ax.yaxis.set_major_locator(MultipleLocator(0.2))
     ax.yaxis.set_minor_locator(MultipleLocator(0.05))
-    ax.grid(which='both')
+    ax.grid(which="both")
     if display:
         fig.show()
     return fig
@@ -119,7 +130,7 @@ def main(
     tolx=1e-8,
     tolf=1e-8,
     fix_te=True,
-    t_te_min=0.,
+    t_te_min=0.0,
     t_c_min=0.01,
     A_cs_min=None,
     Cm_max=None,

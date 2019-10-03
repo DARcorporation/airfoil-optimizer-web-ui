@@ -6,7 +6,6 @@ from differential_evolution import DifferentialEvolutionDriver
 
 
 class PopulationReporter(CaseRecorder):
-
     def record_metadata_system(self, recording_requester):
         pass
 

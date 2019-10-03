@@ -95,10 +95,7 @@ class RunsUpdate(Resource):
                 return response_object, 400
             else:
                 run.progress = post_data["progress"]
-                response_object = {
-                    "status": "success",
-                    "message": f"Run updated",
-                }
+                response_object = {"status": "success", "message": f"Run updated"}
                 db.session.commit()
                 return response_object, 200
         except exc.DataError:

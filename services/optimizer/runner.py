@@ -37,7 +37,7 @@ def reporter(host, id):
                                 "iteration": int(hdf5_files[-1].split(".")[0]),
                                 "pop": f["pop"][:].tolist(),
                                 "fit": f["fit"][:].tolist(),
-                            }
+                            },
                         },
                     )
                 os.remove(hdf5_files[-1])

@@ -30,13 +30,7 @@ class TestRunsService(BaseTestCase):
             response = self.client.post(
                 "/runs",
                 data=json.dumps(
-                    {
-                        "cl": 1.0,
-                        "n_c": 3,
-                        "n_t": 3,
-                        "gen": 100,
-                        "report": False,
-                    }
+                    {"cl": 1.0, "n_c": 3, "n_t": 3, "gen": 100, "report": False}
                 ),
                 content_type="application/json",
             )

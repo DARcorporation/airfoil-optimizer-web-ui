@@ -19,7 +19,9 @@ class AfOptModel(om.Group):
         self.options.declare("n_t", default=6, types=int)
         self.options.declare("fix_te", default=True, types=bool)
 
-        self.options.declare("t_te_min", default=0.0, lower=0., types=float, allow_none=False)
+        self.options.declare(
+            "t_te_min", default=0.0, lower=0.0, types=float, allow_none=False
+        )
         self.options.declare("t_c_min", default=0.1, types=float, allow_none=True)
         self.options.declare("A_cs_min", default=0.1, types=float, allow_none=True)
         self.options.declare("Cm_max", default=None, types=float, allow_none=True)
@@ -56,7 +58,9 @@ class AfOptModel(om.Group):
         self.add_design_var("a_t", lower=a_t_lower, upper=a_t_upper)
 
         if not self.options["fix_te"]:
-            self.add_design_var("t_te", lower=self.options['t_te_min'], upper=t_te_upper)
+            self.add_design_var(
+                "t_te", lower=self.options["t_te_min"], upper=t_te_upper
+            )
 
         # Objective
         self.add_objective("Cd")  # Cd
@@ -67,7 +71,9 @@ class AfOptModel(om.Group):
         if self.options["t_c_min"] is not None:
             self.add_subsystem(
                 "G1",
-                om.ExecComp(f"g1 = 1 - t_c / {self.options['t_c_min']:15g}", g1=0.0, t_c=1.0),
+                om.ExecComp(
+                    f"g1 = 1 - t_c / {self.options['t_c_min']:15g}", g1=0.0, t_c=1.0
+                ),
                 promotes=["*"],
             )
             self.add_constraint("g1", upper=0.0)  # t_c >= t_c_min
@@ -75,7 +81,9 @@ class AfOptModel(om.Group):
         if self.options["A_cs_min"] is not None:
             self.add_subsystem(
                 "G2",
-                om.ExecComp(f"g2 = 1 - A_cs / {self.options['A_cs_min']:15g}", g2=0, A_cs=1.0),
+                om.ExecComp(
+                    f"g2 = 1 - A_cs / {self.options['A_cs_min']:15g}", g2=0, A_cs=1.0
+                ),
                 promotes=["*"],
             )
             self.add_constraint("g2", upper=0.0)  # A_cs >= A_cs_min
@@ -83,7 +91,11 @@ class AfOptModel(om.Group):
         if self.options["Cm_max"] is not None:
             self.add_subsystem(
                 "G3",
-                om.ExecComp(f"g3 = 1 - abs(Cm) / {np.abs(self.options['A_cs_min']):15g}", g3=0.0, Cm=1.0),
+                om.ExecComp(
+                    f"g3 = 1 - abs(Cm) / {np.abs(self.options['A_cs_min']):15g}",
+                    g3=0.0,
+                    Cm=1.0,
+                ),
                 promotes=["*"],
             )
             self.add_constraint("g3", lower=0.0)  # |Cm| <= |Cm_max|
@@ -92,18 +104,20 @@ class AfOptModel(om.Group):
         outputs = dict(self.list_outputs(out_stream=None))
 
         s_t_te_des = f"{outputs['ivc.t_te']['value'][0]:.4g}"
-        desvar_formatter = {'float_kind': '{: 7.4f}'.format}
+        desvar_formatter = {"float_kind": "{: 7.4f}".format}
 
         yaml = ""
         yaml += f"Cl: {outputs['ivc.Cl_des']['value'][0]:.4g}\n"
         yaml += f"M: {outputs['ivc.M']['value'][0]:.4g}\n"
         yaml += f"Re: {outputs['ivc.Re']['value'][0]:.4g}\n"
-        yaml += ('' if self.options['fix_te'] else 'min ') + f"t_te: {self.options['t_te_min']:.4g}\n"
-        if self.options['t_c_min'] is not None:
+        yaml += (
+            "" if self.options["fix_te"] else "min "
+        ) + f"t_te: {self.options['t_te_min']:.4g}\n"
+        if self.options["t_c_min"] is not None:
             yaml += f"t_c_min: {self.options['t_c_min']:.4g}\n"
-        if self.options['A_cs_min'] is not None:
+        if self.options["A_cs_min"] is not None:
             yaml += f"A_cs_min: {self.options['A_cs_min']:.4g}\n"
-        if self.options['Cm_max'] is not None:
+        if self.options["Cm_max"] is not None:
             yaml += f"Cm_max: {self.options['Cm_max']:.4g}\n"
         yaml += f"Cd: {outputs['XFoil.Cd']['value'][0]:.4g}\n"
         yaml += f"Cm: {outputs['XFoil.Cm']['value'][0]: .4g}\n"
@@ -111,7 +125,7 @@ class AfOptModel(om.Group):
         yaml += f"A_cs: {outputs['Geom.A_cs']['value'][0]:.4g}\n"
         yaml += f"a_c: {np.array2string(outputs['ivc.a_c']['value'], formatter=desvar_formatter, separator=', ')}\n"
         yaml += f"a_t: {np.array2string(outputs['ivc.a_t']['value'], formatter=desvar_formatter, separator=', ')}"
-        if not self.options['fix_te']:
+        if not self.options["fix_te"]:
             yaml += f"\nt_te: {s_t_te_des}"
 
         return yaml

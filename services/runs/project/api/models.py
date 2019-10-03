@@ -12,11 +12,13 @@ class Run(db.Model):
     tolx = db.Column(db.Float(), nullable=False)
     tolf = db.Column(db.Float(), nullable=False)
     fix_te = db.Column(db.Boolean(), nullable=False, default=True)
-    t_te_min = db.Column(db.Float(), nullable=True, default=0.)
+    t_te_min = db.Column(db.Float(), nullable=True, default=0.0)
     t_c_min = db.Column(db.Float(), nullable=True, default=0.01)
     A_cs_min = db.Column(db.Float(), nullable=True, default=None)
     Cm_max = db.Column(db.Float(), nullable=True, default=None)
-    strategy = db.Column(db.String(), default="rand-to-best/1/exp/random", nullable=False)
+    strategy = db.Column(
+        db.String(), default="rand-to-best/1/exp/random", nullable=False
+    )
     f = db.Column(db.Float(), default=None, nullable=True)
     cr = db.Column(db.Float(), default=None, nullable=True)
     adaptivity = db.Column(db.Integer(), default=2, nullable=False)
@@ -34,7 +36,7 @@ class Run(db.Model):
         tolx=1e-8,
         tolf=1e-8,
         fix_te=True,
-        t_te_min=0.,
+        t_te_min=0.0,
         t_c_min=0.01,
         A_cs_min=None,
         Cm_max=None,
