@@ -14,6 +14,7 @@ from differential_evolution import DifferentialEvolutionDriver
 from . import rank, run_parallel
 from .components.airfoil_component import cst2coords
 from .model import AfOptModel
+from .recorders import PopulationReporter
 
 
 def get_de_driver(gen=100, tolx=1e-8, tolf=1e-8, strategy="rand-to-best/1/exp/random", f=None, cr=None, adaptivity=2):
@@ -181,6 +182,7 @@ def main(
     prob.model = AfOptModel(**kwargs)
 
     prob.driver = get_de_driver(gen, tolx, tolf, strategy, f, cr, adaptivity)
+    prob.driver.add_recorder(PopulationReporter())
     prob.setup()
 
     # Set reference values
