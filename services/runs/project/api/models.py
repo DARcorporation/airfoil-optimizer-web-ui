@@ -23,6 +23,7 @@ class Run(db.Model):
     n_proc = db.Column(db.Integer(), nullable=False, default=28)
     report = db.Column(db.Boolean(), nullable=False, default=False)
     status = db.Column(db.Integer(), nullable=False, default=0)
+    progress = db.Column(db.JSON, nullable=False, default=None)
 
     def __init__(
         self,
@@ -45,6 +46,7 @@ class Run(db.Model):
         n_proc=28,
         run_name=None,
         report=False,
+        progress=None,
     ):
         self.run_name = run_name
         self.cl = cl
@@ -65,6 +67,7 @@ class Run(db.Model):
         self.adaptivity = adaptivity
         self.n_proc = n_proc
         self.report = report
+        self.progress = progress
 
     def __iter__(self):
         values = vars(self)

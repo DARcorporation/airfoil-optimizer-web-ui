@@ -76,6 +76,38 @@ class RunsAccept(Resource):
             return response_object, 200
 
 
+class RunsUpdate(Resource):
+    def post(self):
+        """Update run with new data."""
+        post_data = request.get_json()
+        response_object = {"status": "fail", "message": "Run does not exist."}
+        if not post_data:
+            return response_object, 400
+
+        try:
+            run = Run.query.filter_by(id=post_data["id"]).first()
+            if not run:
+                return response_object, 404
+            elif run.status != 1:
+                response_object[
+                    "message"
+                ] = "Cannot update run which has not been accepted"
+                return response_object, 400
+            else:
+                run.progress = post_data["progress"]
+                response_object = {
+                    "status": "success",
+                    "message": f"Run updated",
+                }
+                db.session.commit()
+                return response_object, 200
+        except exc.DataError:
+            return response_object, 404
+        except KeyError:
+            response_object["message"] = "Invalid payload"
+            return response_object, 400
+
+
 class RunsComplete(Resource):
     def post(self):
         """Mark a run as complete."""
@@ -113,4 +145,5 @@ api.add_resource(RunsPing, "/runs/ping")
 api.add_resource(RunsList, "/runs")
 api.add_resource(Runs, "/runs/<run_id>")
 api.add_resource(RunsAccept, "/runs/accept")
+api.add_resource(RunsUpdate, "/runs/update")
 api.add_resource(RunsComplete, "/runs/complete")
