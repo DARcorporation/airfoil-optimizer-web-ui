@@ -1,5 +1,7 @@
 import configparser
 import datetime
+import glob
+import h5py
 import json
 import os
 import requests
@@ -7,6 +9,7 @@ import smtplib
 import subprocess
 import sys
 import time
+import threading
 
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -17,6 +20,33 @@ config.read(os.environ["SMTP_SETTINGS"])
 config = config["DEFAULT"]
 
 
+def reporter(host, id):
+    while True:
+        hdf5_files = glob.glob("*.hdf5")
+        if len(hdf5_files):
+            try:
+                if len(hdf5_files) > 1:
+                    for file in hdf5_files[:-1]:
+                        os.remove(file)
+                with h5py.File(hdf5_files[-1], "r") as f:
+                    requests.post(
+                        f"{host}/runs/update",
+                        json={
+                            "id": id,
+                            "progress": {
+                                "iteration": int(hdf5_files[-1].split(".")[0]),
+                                "pop": f["pop"][:].tolist(),
+                                "fit": f["fit"][:].tolist(),
+                            }
+                        },
+                    )
+                os.remove(hdf5_files[-1])
+                continue
+            except:
+                pass
+        time.sleep(0.1)
+
+
 def run(
     cl,
     n_c,
@@ -25,7 +55,7 @@ def run(
     tolx=1e-8,
     tolf=1e-8,
     fix_te=True,
-    t_te_min=0.,
+    t_te_min=0.0,
     t_c_min=0.01,
     A_cs_min=None,
     Cm_max=None,
@@ -36,6 +66,7 @@ def run(
     n_proc=28,
     run_name=None,
     report=False,
+    **kwargs,
 ):
     """
     Solve the specified optimization problem and handle reporting of results.
@@ -123,16 +154,22 @@ def run(
         ]
         print(f"Going to run the following command: \n{cmd}")
 
-        with open(log_file, "wb") as log:
-            process = subprocess.Popen(
-                cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
-            )
-            for line in process.stdout:
-                sys.stdout.write(line.decode("utf-8"))
-                log.write(line)
+        process = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+        )
+        for line in process.stdout:
+            s = line.decode("utf-8")
+            sys.stdout.write(s)
+            with open(log_file, "a+") as log:
+                log.write(s)
 
-            process.communicate()
-            returncode = process.returncode
+        with open(log_file, "r") as f:
+            all_text = f.read()
+        with open(log_file, "w") as f:
+            f.write(all_text.replace("\n\n", "\n"))
+
+        process.communicate()
+        returncode = process.returncode
 
         if report:
             print("Going to send an email")
@@ -205,13 +242,16 @@ def main():
             id = response_object["data"]["id"]
 
             kwargs = dict(response_object["data"])
-            del kwargs["id"]
-            del kwargs["status"]
             print(f"Got a request to start a run with the following data: \n{kwargs}")
 
-            returncode = run(**kwargs)
+            thread = threading.Thread(target=reporter, args=(host, id))
+            thread.start()
+
+            returncode = run(**kwargs, host=host)
             print(f"Returncode: {returncode}")
-            requests.post(f"{host}/runs/complete", json={"id": id, "success": returncode == 0})
+            requests.post(
+                f"{host}/runs/complete", json={"id": id, "success": returncode == 0}
+            )
         except requests.exceptions.ConnectionError as e:
             pass
         except json.decoder.JSONDecodeError:
