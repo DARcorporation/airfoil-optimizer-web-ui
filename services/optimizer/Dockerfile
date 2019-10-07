@@ -24,13 +24,20 @@ RUN wget -O xfoil.tar.gz https://github.com/daniel-de-vries/xfoil-python/archive
     rm -rf /tmp/* && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
+# Get airfoil-optimizer from Git
+RUN wget -O airfoil-optimizer.tar.gz https://github.com/daniel-de-vries/airfoil-optimizer/archive/0.4.0.tar.gz && \
+    tar -xzf airfoil-optimizer.tar.gz && \
+    pip3 install ./airfoil-optimizer-0.4.0 && \
+    rm -rf /tmp/* && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
 # Add source and switch working directory to it
 COPY . /usr/src/app
 WORKDIR /usr/src/app
 
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
-ENV PYTHONPATH=$PYTHONPATH:/usr/src/app/af_opt
+#ENV PYTHONPATH=$PYTHONPATH:/usr/src/app/af_opt
 
 # run server
 CMD python3 -u runner.py
