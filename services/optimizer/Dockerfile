@@ -37,7 +37,6 @@ WORKDIR /usr/src/app
 
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
-#ENV PYTHONPATH=$PYTHONPATH:/usr/src/app/af_opt
 
 # run server
 CMD python3 -u runner.py
