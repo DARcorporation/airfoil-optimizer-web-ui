@@ -92,7 +92,7 @@ class AfOptModel(om.Group):
             self.add_subsystem(
                 "G3",
                 om.ExecComp(
-                    f"g3 = 1 - abs(Cm) / {np.abs(self.options['A_cs_min']):15g}",
+                    f"g3 = 1 - abs(Cm) / {np.abs(self.options['Cm_max']):15g}",
                     g3=0.0,
                     Cm=1.0,
                 ),
