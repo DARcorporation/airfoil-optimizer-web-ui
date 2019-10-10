@@ -81,6 +81,8 @@ export default function AddRun(props) {
   const { onClose, open } = props;
   const [values, setValues] = React.useState({
     cl: 1.0,
+    re: 1e6,
+    ma: 0.0,
     n_c: 3,
     n_t: 3,
     fix_te: true,
@@ -136,6 +138,8 @@ export default function AddRun(props) {
     event.preventDefault();
     const data = {
       cl: values.cl,
+      re: values.re,
+      ma: values.ma,
       n_c: values.n_c,
       n_t: values.n_t,
       fix_te: values.fix_te,
@@ -199,6 +203,40 @@ export default function AddRun(props) {
                   name="cl"
                   value={values.cl}
                   onChange={handleChange("cl")}
+                  type="number"
+                  inputProps={{
+                    step: 0.001,
+                  }}
+                  className={classes.textField}
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                  margin="normal"
+                  variant="outlined"
+                />
+                <br/>
+                <TextField
+                  label="Reynolds Number"
+                  name="re"
+                  value={values.re}
+                  onChange={handleChange("re")}
+                  type="number"
+                  inputProps={{
+                    step: 0.001,
+                  }}
+                  className={classes.textField}
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                  margin="normal"
+                  variant="outlined"
+                />
+                <br/>
+                <TextField
+                  label="Mach Number"
+                  name="ma"
+                  value={values.ma}
+                  onChange={handleChange("ma")}
                   type="number"
                   inputProps={{
                     step: 0.001,

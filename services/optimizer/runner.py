@@ -49,6 +49,8 @@ def reporter(host, id):
 
 def run(
     cl,
+    re,
+    ma,
     n_c,
     n_t,
     gen=100,
@@ -75,6 +77,10 @@ def run(
     ----------
     cl : float
         Design lift coefficient
+    re : float
+        Reynolds number
+    ma : float
+        Mach number
     n_c, n_t : int
         Number of CST coefficients for the chord line and thickness distribution, respectively
     gen : int, optional
@@ -134,6 +140,8 @@ def run(
             "-m",
             "af_opt.problem",
             str(cl),
+            str(re),
+            str(ma),
             str(n_c),
             str(n_t),
             str(gen),

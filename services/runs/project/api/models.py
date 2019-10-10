@@ -6,6 +6,8 @@ class Run(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     run_name = db.Column(db.String(128), nullable=True)
     cl = db.Column(db.Float(), nullable=False)
+    re = db.Column(db.Float(), nullable=False, default=1e6)
+    ma = db.Column(db.Float(), nullable=False, default=0.0)
     n_c = db.Column(db.Integer(), nullable=False)
     n_t = db.Column(db.Integer(), nullable=False)
     gen = db.Column(db.Integer(), nullable=False, default=100)
@@ -30,6 +32,8 @@ class Run(db.Model):
     def __init__(
         self,
         cl,
+        re,
+        ma,
         n_c,
         n_t,
         gen=100,
@@ -52,6 +56,8 @@ class Run(db.Model):
     ):
         self.run_name = run_name
         self.cl = cl
+        self.re = re
+        self.ma = ma
         self.n_c = n_c
         self.n_t = n_t
         self.gen = gen
