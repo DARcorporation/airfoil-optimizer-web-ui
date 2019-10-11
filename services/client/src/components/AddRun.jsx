@@ -91,6 +91,7 @@ export default function AddRun(props) {
     tolf: 1e-8,
     t_te_min: 0.0025,
     t_c_min: 0.1,
+    r_le_min: 0.05,
     A_cs_min: "",
     Cm_max: "",
     sMutation: "rand-to-best",
@@ -148,6 +149,7 @@ export default function AddRun(props) {
       tolf: values.tolf,
       t_te_min: values.t_te_min ? Number(values.t_te_min) : null,
       t_c_min: values.t_c_min ? Number(values.t_c_min) : null,
+      r_le_min: values.r_le_min ? Number(values.r_le_min) : null,
       A_cs_min: values.A_cs_min ? Number(values.A_cs_min) : null,
       Cm_max: values.Cm_max ? Number(values.Cm_max) : null,
       adaptivity: values.adaptivity,
@@ -281,6 +283,23 @@ export default function AddRun(props) {
                   name="t_c_min"
                   value={values.t_c_min}
                   onChange={handleChange("t_c_min")}
+                  type="text"
+                  inputProps={{
+                    pattern: "[+-]?([1-9]\\d*|0)?(\\.\\d*)?([Ee][+-]?\\d+)?",
+                  }}
+                  className={classes.textField}
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                  margin="normal"
+                  variant="outlined"
+                />
+                <br/>
+                <TextField
+                  label="Minimum LE Radius"
+                  name="r_le_min"
+                  value={values.r_le_min}
+                  onChange={handleChange("r_le_min")}
                   type="text"
                   inputProps={{
                     pattern: "[+-]?([1-9]\\d*|0)?(\\.\\d*)?([Ee][+-]?\\d+)?",

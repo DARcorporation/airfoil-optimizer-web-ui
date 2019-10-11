@@ -16,6 +16,7 @@ class Run(db.Model):
     fix_te = db.Column(db.Boolean(), nullable=False, default=True)
     t_te_min = db.Column(db.Float(), nullable=True, default=0.0)
     t_c_min = db.Column(db.Float(), nullable=True, default=0.01)
+    r_le_min = db.Column(db.Float(), nullable=True, default=0.01)
     A_cs_min = db.Column(db.Float(), nullable=True, default=None)
     Cm_max = db.Column(db.Float(), nullable=True, default=None)
     strategy = db.Column(
@@ -42,6 +43,7 @@ class Run(db.Model):
         fix_te=True,
         t_te_min=0.0,
         t_c_min=0.01,
+        r_le_min=0.01,
         A_cs_min=None,
         Cm_max=None,
         cm_ref=None,
@@ -66,6 +68,7 @@ class Run(db.Model):
         self.fix_te = fix_te
         self.t_te_min = t_te_min
         self.t_c_min = t_c_min
+        self.r_le_min = r_le_min
         self.A_cs_min = A_cs_min
         self.Cm_max = Cm_max
         self.cm_ref = cm_ref

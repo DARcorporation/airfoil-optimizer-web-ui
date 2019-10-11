@@ -59,6 +59,7 @@ def run(
     fix_te=True,
     t_te_min=0.0,
     t_c_min=0.01,
+    r_le_min=0.05,
     A_cs_min=None,
     Cm_max=None,
     strategy="rand-to-best/1/exp/random",
@@ -95,6 +96,8 @@ def run(
         Minimum TE thickness as fraction of chord length. Default is 0.0.
     t_c_min : float or None, optional
         Minimum thickness over chord ratio. None if unconstrained. Defaults is 0.01.
+    r_le_min : float or None, optional
+        Minimum leading edge radius. None if unconstrained. Defaults is 0.05.
     A_cs_min : float or None, optional
         Minimum cross sectional area. None if unconstrained. Default is None.
     Cm_max : float or None, optional
@@ -150,6 +153,7 @@ def run(
             str(fix_te),
             str(t_te_min),
             str(t_c_min),
+            str(r_le_min),
             str(A_cs_min),
             str(Cm_max),
             strategy,
