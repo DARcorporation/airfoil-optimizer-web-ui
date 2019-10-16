@@ -13,7 +13,6 @@ COPY package-lock.json /usr/src/app/package-lock.json
 RUN npm config set unsafe-perm true
 RUN npm ci
 RUN npm install react-scripts@2.1.8 -g --silent
-RUN rm -rf node_modules/node-sass/ && npm install
 
 # start app
 CMD npm start
