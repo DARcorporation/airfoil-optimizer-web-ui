@@ -11,7 +11,7 @@ RUN apt-get -qq update && \
     apt-get -y install nano && \
     apt-get -y purge cmake && \
     apt-get -y autoremove && \
-    pip3 install 'cmake>=3.12'
+    pip3 install 'cmake==3.12.*'
 
 # Install requirements with pip
 COPY ./requirements.txt /tmp/requirements.txt
