@@ -27,8 +27,10 @@ def recreate_db():
 @cli.command("seed_db")
 def seed_db():
     """Seeds the database"""
-    db.session.add(Run(cl=1.0, n_c=3, n_t=3))
-    db.session.add(Run(cl=0.5, n_c=6, n_t=6, gen=300))
+    db.session.add(Run(cl=0.65, re=25000.0, ma=0.025, n_c=3, n_t=3, gen=3000,
+                       fix_te=True, t_te_min=0.0375, t_c_min=0.15, r_le_min=0.00625,
+                       strategy="rand-to-best/1/bin/random", adaptivity=2,
+                       report=True, n_proc=30))
     db.session.commit()
 
 

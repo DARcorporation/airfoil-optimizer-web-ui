@@ -18,6 +18,7 @@ class Run(db.Model):
     t_c_min = db.Column(db.Float(), nullable=True, default=0.01)
     r_le_min = db.Column(db.Float(), nullable=True, default=0.01)
     A_cs_min = db.Column(db.Float(), nullable=True, default=None)
+    A_bins_min = db.Column(db.Float(), nullable=True, default=None)
     Cm_max = db.Column(db.Float(), nullable=True, default=None)
     strategy = db.Column(
         db.String(), default="rand-to-best/1/exp/random", nullable=False
@@ -45,6 +46,7 @@ class Run(db.Model):
         t_c_min=0.01,
         r_le_min=0.01,
         A_cs_min=None,
+        A_bins_min=None,
         Cm_max=None,
         cm_ref=None,
         strategy="rand-to-best/1/exp/random",
@@ -70,6 +72,7 @@ class Run(db.Model):
         self.t_c_min = t_c_min
         self.r_le_min = r_le_min
         self.A_cs_min = A_cs_min
+        self.A_bins_min = A_bins_min
         self.Cm_max = Cm_max
         self.cm_ref = cm_ref
         self.strategy = strategy

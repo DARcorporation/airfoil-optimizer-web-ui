@@ -61,6 +61,7 @@ def run(
     t_c_min=0.01,
     r_le_min=0.05,
     A_cs_min=None,
+    A_bins_min=None,
     Cm_max=None,
     strategy="rand-to-best/1/exp/random",
     f=None,
@@ -100,6 +101,8 @@ def run(
         Minimum leading edge radius. None if unconstrained. Defaults is 0.05.
     A_cs_min : float or None, optional
         Minimum cross sectional area. None if unconstrained. Default is None.
+    A_bins_min : float or None, optional
+        Minimum relative area of the airfoil in each bin along the chord. None if unconstrained. Default is None.
     Cm_max : float or None, optional
         Maximum absolute moment coefficient. None if unconstrained. Default is None.
     strategy : string, optional
@@ -155,6 +158,7 @@ def run(
             str(t_c_min),
             str(r_le_min),
             str(A_cs_min),
+            str(A_bins_min),
             str(Cm_max),
             strategy,
             str(f),

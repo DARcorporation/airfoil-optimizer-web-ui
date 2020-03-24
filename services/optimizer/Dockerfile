@@ -26,11 +26,14 @@ RUN wget -O xfoil.tar.gz https://github.com/daniel-de-vries/xfoil-python/archive
 
 # Get airfoil-optimizer from Git
 RUN mkdir airfoil-optimizer && \
-    wget -O - https://github.com/daniel-de-vries/airfoil-optimizer/tarball/master \
+    wget -O - https://github.com/daniel-de-vries/airfoil-optimizer/archive/0.9.0.tar.gz \
         | tar xz -C airfoil-optimizer --strip-components 1 && \
     pip3 install ./airfoil-optimizer && \
     rm -rf /tmp/* && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+#COPY Airfoil_Optimizer-0.8.0-py3-none-any.whl /usr/src/app
+#RUN pip3 install Airfoil_Optimizer-0.8.0-py3-none-any.whl
 
 # Add source and switch working directory to it
 COPY . /usr/src/app

@@ -65,7 +65,7 @@ services:
       - 3007:3000
     environment:
       - NODE_ENV=development
-      - REACT_APP_RUNS_SERVICE_URL=http://localhost
+      - REACT_APP_RUNS_SERVICE_URL=http://192.168.1.72
     depends_on:
       - runs
 

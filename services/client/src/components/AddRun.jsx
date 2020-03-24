@@ -93,6 +93,7 @@ export default function AddRun(props) {
     t_c_min: 0.1,
     r_le_min: 0.05,
     A_cs_min: "",
+    A_bins_min: "",
     Cm_max: "",
     sMutation: "rand-to-best",
     sNumber: "1",
@@ -151,6 +152,7 @@ export default function AddRun(props) {
       t_c_min: values.t_c_min ? Number(values.t_c_min) : null,
       r_le_min: values.r_le_min ? Number(values.r_le_min) : null,
       A_cs_min: values.A_cs_min ? Number(values.A_cs_min) : null,
+      A_bins_min: values.A_bins_min ? Number(values.A_bins_min) : null,
       Cm_max: values.Cm_max ? Number(values.Cm_max) : null,
       adaptivity: values.adaptivity,
       f: values.adaptivity === 0 ? values.f : null,
@@ -317,6 +319,23 @@ export default function AddRun(props) {
                   name="A_cs_min"
                   value={values.A_cs_min}
                   onChange={handleChange("A_cs_min")}
+                  type="text"
+                  inputProps={{
+                    pattern: "[+-]?([1-9]\\d*|0)?(\\.\\d*)?([Ee][+-]?\\d+)?",
+                  }}
+                  className={classes.textField}
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                  margin="normal"
+                  variant="outlined"
+                />
+                <br/>
+                <TextField
+                  label="Minimum Relative Bin Area"
+                  name="A_bins_min"
+                  value={values.A_bins_min}
+                  onChange={handleChange("A_bins_min")}
                   type="text"
                   inputProps={{
                     pattern: "[+-]?([1-9]\\d*|0)?(\\.\\d*)?([Ee][+-]?\\d+)?",
